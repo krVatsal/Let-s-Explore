@@ -1,0 +1,30 @@
+{
+  "name": "lets-explore",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krVatsal/Let-s-Explore.git"
+  },
+  "author": "Vatsal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/krVatsal/Let-s-Explore/issues"
+  },
+  "homepage": "https://github.com/krVatsal/Let-s-Explore#readme",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cloudinary": "^2.5.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "mongoose": "^8.7.3",
+    "nodemon": "^3.1.7"
+  }
+}
