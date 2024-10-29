@@ -1,5 +1,33 @@
 import mongoose from "mongoose";
 
+const participantSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    guesses: [
+        {
+            puzzleId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Puzzle',
+                required: true
+            },
+            guessedLocation: {
+                coordinates: { type: [Number], required: true } 
+            },
+            imageUrl: {
+                type: String,
+                default: ""
+            },
+            timestamp: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ]
+}, { _id: false }); // _id: false prevents generating an extra _id for each participant entry
+
 const huntSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -26,7 +54,7 @@ const huntSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        // required: true
+        required: true
     },
     puzzles: [
         {
@@ -35,7 +63,7 @@ const huntSchema = new mongoose.Schema({
                 required: true
             },
             location: {
-              coordinates:{type: [Number], require: true}
+                coordinates: { type: [Number], required: true } // [longitude, latitude]
             },
             hints: [
                 {
@@ -51,13 +79,7 @@ const huntSchema = new mongoose.Schema({
             }
         }
     ],
-    participants: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            default: []
-        }
-    ],
+    participants: [participantSchema], 
     leaderboard: [
         {
             user: {

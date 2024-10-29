@@ -79,8 +79,69 @@ const getUpcomingEvents= asyncHandler(async(req, res)=>{
         throw new Error(error)
        }
 })
+
+const participate= asyncHandler(async(req,res)=>{
+try {
+        const {participant} = req.body
+        if(!participant){
+            throw new ApiError(400, "Failed to fetch participant")
+        }
+        const {huntId}= req.params
+        const hunt= await HuntModel.findById(huntId)
+        if(!hunt){
+            throw new ApiError(500, "Failed to fetch the hunt")
+        }
+        if(hunt.participants.includes(participant)){
+            throw new ApiError(400, "User already registered in the Hunt")
+        }
+        hunt.participants.push(participant)
+        await hunt.save()
+
+        const huntPuzzles= hunt.puzzles
+        if(!huntPuzzles){
+            throw new ApiError(400, "No puzzles in the hunt")
+        }
+        if(huntPuzzles.puzzle.photoReq){
+            const huntImagePath= req.files?.image[0]?.path
+            if(!huntImagePath){
+                throw new ApiError(400, "Image is required for this puzzle")
+            }
+            const uploadImage= await uploadOnCloudinary(huntImagePath)
+            if(!uploadImage){
+                throw new ApiError(500, "Failed to upload image to cloudinary")
+            }
+            await hunt.participants.guesses.imageUrl.push(uploadImage.url)  
+        }
+
+        
+        return res.status(200)
+        .json(new ApiResponse(200,{huntId:hunt._id, participantsCount: hunt.participants.length, puzzles: huntPuzzles}, "User participated sucessfully in the hunt"))
+} catch (error) {
+    throw new Error(error)
+}
+
+})
+
+const yourHunts= asyncHandler(async(req, res)=>{
+try {
+        const createdBy= req.body()
+        if(!createdBy){
+            throw new ApiError(500, "Failed to fetch user")
+        } 
+    const hunts = await HuntModel.find({createdBy})
+    if(!hunts){
+        throw new ApiError(404, "No hunts found")
+    }
+    return res.status(200)
+    .json(new ApiResponse(200, hunts, "Hunts fetched sucessfully"))
+} catch (error) {
+    throw new Error(error)
+}
+})
 export{
     createHunt,
     getLiveHunts,
-    getUpcomingEvents
+    getUpcomingEvents,
+    participate,
+    yourHunts
 }
