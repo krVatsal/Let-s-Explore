@@ -5,7 +5,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { HuntModel } from "../models/hunt.models.js";
 
 const createHunt = asyncHandler(async(req,res)=>{
-    const{name, description, puzzles, startTime, endTime }= req.body
+    const{name, description, puzzles, startTime, endTime ,createdBy}= req.body
 try {
         if([name, description, puzzles, startTime, endTime ].some((field)=> field?.trim)===""){
             throw new ApiError(500, "All fields are required")
@@ -34,7 +34,7 @@ try {
             throw new ApiError(400, "Start time must be before end time")
         }
       const hunt = await HuntModel.create({
-        name, description, puzzles, startTime, endTime 
+        name, description, puzzles, startTime, endTime ,createdBy
       })
       if(!hunt){
         throw new ApiError(500, "Failed to create the hunt")

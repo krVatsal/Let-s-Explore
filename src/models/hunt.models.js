@@ -70,6 +70,21 @@ const huntSchema = new mongoose.Schema({
                     hint: {
                         type: String,
                         default: ""
+                    },
+                    level: {
+                        type: String,
+                        enum: ['easy', 'hard'], // Specifies hint level
+                        required: true
+                    },
+                    points: {
+                        type: Number,
+                        required: true,
+                        validate: {
+                            validator: function (value) {
+                                return value > 0;
+                            },
+                            message: "Points must be a positive number"
+                        }
                     }
                 }
             ],

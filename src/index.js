@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import Redis from 'ioredis';
 dotenv.config({
     path: './.env'
 });
@@ -14,5 +15,13 @@ connectDB().then(()=>{
 .catch((err)=>{
     console.log("DB connection failed")
 })
+export const redis = new Redis(process.env.REDIS_URL); // Named export
 
+redis.on('connect', () => {
+    console.log('Connected to Redis');
+});
+
+redis.on('error', (error) => {
+    console.error('Redis error:', error);
+});
 
