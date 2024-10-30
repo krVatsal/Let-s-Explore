@@ -14,8 +14,7 @@ import MongoStore from "connect-mongo";
 import mongoose from "mongoose";
 import userAuthRoute from "./routes/auth.route.js";
 import participantRoute from "./routes/participant.route.js";
-import leaderboard from "./routes/leaderboard.route.js"
-// import leaderboardRoute from "./routes/leaderboard.route.js"; // Renamed `lbd` to `leaderboardRoute` for clarity
+import leaderboardRoute from "./routes/leaderboard.route.js";
 
 dotenv.config({ path: '../.env' });
 
@@ -32,6 +31,7 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 
+// Configure Passport's local strategy for login
 passport.use(new LocalStrategy({
     usernameField: 'email',
     passwordField: 'password'
@@ -88,10 +88,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: 'mongodb://localhost:27017/yourDatabase',
-        mongooseConnection: mongoose.connection,
+        mongoUrl: 'mongodb://localhost:27017/MnnitHunt',
         ttl: 14 * 24 * 60 * 60,
-        autoRemove: 'native',
     }),
     cookie: {
         maxAge: 14 * 24 * 60 * 60 * 1000,
@@ -103,9 +101,9 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use("/auth", userAuthRoute);
+
+app.use("/auth", userAuthRoute); 
 app.use("/api/v1", participantRoute);
-app.use("api/lb",leaderboard);
- // Use `leaderboardRoute` instead of `lbd`
+app.use("/api/v1", leaderboardRoute);
 
 export default app;

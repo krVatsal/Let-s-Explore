@@ -101,18 +101,7 @@ try {
         if(!huntPuzzles){
             throw new ApiError(400, "No puzzles in the hunt")
         }
-        if(huntPuzzles.puzzle.photoReq){
-            const huntImagePath= req.files?.image[0]?.path
-            if(!huntImagePath){
-                throw new ApiError(400, "Image is required for this puzzle")
-            }
-            const uploadImage= await uploadOnCloudinary(huntImagePath)
-            if(!uploadImage){
-                throw new ApiError(500, "Failed to upload image to cloudinary")
-            }
-            await hunt.participants.guesses.imageUrl.push(uploadImage.url)  
-        }
-
+     
         
         return res.status(200)
         .json(new ApiResponse(200,{huntId:hunt._id, participantsCount: hunt.participants.length, puzzles: huntPuzzles}, "User participated sucessfully in the hunt"))
@@ -122,9 +111,88 @@ try {
 
 })
 
+const submitGuess = asyncHandler(async (req, res) => {
+    try {
+        const { huntId, userId, puzzleId, guessedLocation, timeTaken } = req.body;
+        if (!huntId || !userId || !puzzleId || !guessedLocation || !timeTaken) {
+            throw new ApiError(400, 'Missing required fields');
+        }
+
+        const hunt = await HuntModel.findById(huntId);
+        if (!hunt) {
+            throw new ApiError(404, 'Hunt not found');
+        }
+
+        const puzzle = hunt.puzzles.id(puzzleId);
+        if (!puzzle) {
+            throw new ApiError(404, 'Puzzle not found');
+        }
+
+        let imageUrl = '';
+        if (puzzle.photoReq) {
+            const huntImagePath = req.files?.image?.[0]?.path;
+            if (!huntImagePath) {
+                throw new ApiError(400, "Image is required for this puzzle");
+            }
+
+            const uploadImage = await uploadOnCloudinary(huntImagePath);
+            if (!uploadImage) {
+                throw new ApiError(500, "Failed to upload image to Cloudinary");
+            }
+            imageUrl = uploadImage.url;
+        }
+
+        const accuracyMargin = 10; // 10 meters
+
+        const { coordinates: originalCoordinates } = puzzle.location; 
+
+        const distance = calculateDistance(guessedLocation, originalCoordinates);
+        if (distance > accuracyMargin) {
+            throw new ApiError(400, "Guess location is not accurate enough");
+        }
+
+        let participant = hunt.participants.find((p) => p.user.toString() === userId);
+        if (!participant) {
+            participant = { user: userId, guesses: [] };
+            hunt.participants.push(participant);
+        }
+
+        participant.guesses.push({
+            guessedLocation: {
+                coordinates: guessedLocation,
+            },
+            imageUrl,
+            timestamp: new Date()
+        });
+
+        await hunt.save();
+
+        
+
+        return res.status(200).json(new ApiResponse('Guess submitted successfully', { imageUrl }));
+    } catch (error) {
+        throw new Error(error);
+    }
+});
+
+const calculateDistance = (coords1, coords2) => {
+    const R = 6371e3; // Earth's radius in meters
+    const lat1 = (coords1.lat * Math.PI) / 180;
+    const lat2 = (coords2.lat * Math.PI) / 180;
+    const deltaLat = ((coords2.lat - coords1.lat) * Math.PI) / 180;
+    const deltaLng = ((coords2.lng - coords1.lng) * Math.PI) / 180;
+
+    const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+              Math.cos(lat1) * Math.cos(lat2) *
+              Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+};
+
 const yourHunts= asyncHandler(async(req, res)=>{
 try {
-        const createdBy= req.body()
+        const createdBy= req.user._id
         if(!createdBy){
             throw new ApiError(500, "Failed to fetch user")
         } 
@@ -138,10 +206,31 @@ try {
     throw new Error(error)
 }
 })
+
+const getParticipant= asyncHandler(async(req,res)=>{
+    try {
+        const { huntId } = req.params;
+        const userId = req.user._id;
+
+        const hunt = await HuntModel.findOne({ _id: huntId, createdBy: userId }).populate('participants.user', 'guesses.imageUrl');
+        if (!hunt) {
+            throw new ApiError(404, "Hunt not found or you're not authorized to view participants.");
+        }
+
+        return res.status(200).json(new ApiResponse(200, hunt.participants, "Participants fetched successfully"));
+    
+}catch (error) {
+   throw new Error(error) 
+}
+})
+
+
 export{
     createHunt,
     getLiveHunts,
     getUpcomingEvents,
     participate,
-    yourHunts
+    yourHunts,
+    submitGuess,
+    getParticipant
 }

@@ -8,11 +8,8 @@ const participantSchema = new mongoose.Schema({
     },
     guesses: [
         {
-            puzzleId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'Puzzle',
-                required: true
-            },
+            
+
             guessedLocation: {
                 coordinates: { type: [Number], required: true } 
             },
@@ -26,8 +23,7 @@ const participantSchema = new mongoose.Schema({
             }
         }
     ]
-}, { _id: false }); // _id: false prevents generating an extra _id for each participant entry
-
+});
 const huntSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -75,16 +71,6 @@ const huntSchema = new mongoose.Schema({
                         type: String,
                         enum: ['easy', 'hard'], // Specifies hint level
                         required: true
-                    },
-                    points: {
-                        type: Number,
-                        required: true,
-                        validate: {
-                            validator: function (value) {
-                                return value > 0;
-                            },
-                            message: "Points must be a positive number"
-                        }
                     }
                 }
             ],
