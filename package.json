@@ -18,6 +18,9 @@
   },
   "homepage": "https://github.com/krVatsal/Let-s-Explore#readme",
   "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
+    "autoprefixer": "^10.4.20",
+    "axios": "^1.7.7",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
@@ -30,15 +33,20 @@
     "express": "^4.21.1",
     "express-session": "^1.18.1",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.454.0",
     "mongoose": "^8.7.3",
     "next": "^15.0.2",
     "nodemon": "^3.1.7",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
+    "postcss": "^8.4.47",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hook-form": "^7.53.1",
     "sessions": "^0.0.2-7",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "tailwindcss": "^3.4.14",
+    "zod": "^3.23.8"
   }
 }

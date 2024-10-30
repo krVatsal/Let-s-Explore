@@ -102,7 +102,13 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+const corsOptions = {
+  origin: 'http://localhost:3000', // Replace with your frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+  credentials: true, // Allow cookies from the frontend
+};
 
+app.use(cors(corsOptions));
 app.use("/auth", userAuthRoute);
 app.use("/api/v1", participantRoute);
 app.use("api/lb",leaderboard);
