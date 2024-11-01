@@ -3,6 +3,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { HuntModel } from "../models/hunt.models.js";
+import redis from "ioredis";
 
 const createHunt = asyncHandler(async(req,res)=>{
     const{name, description, puzzles, startTime, endTime ,createdBy}= req.body
@@ -113,8 +114,9 @@ try {
 
 const submitGuess = asyncHandler(async (req, res) => {
     try {
-        const { huntId, userId, puzzleId, guessedLocation, timeTaken } = req.body;
-        if (!huntId || !userId || !puzzleId || !guessedLocation || !timeTaken) {
+        const { huntId, userId, puzzleId, guessedLocation, timeTaken, hintsOpened } = req.body;
+
+        if (!huntId || !userId || !puzzleId || !guessedLocation || !timeTaken || hintsOpened == null) {
             throw new ApiError(400, 'Missing required fields');
         }
 
@@ -143,33 +145,55 @@ const submitGuess = asyncHandler(async (req, res) => {
         }
 
         const accuracyMargin = 10; // 10 meters
-
-        const { coordinates: originalCoordinates } = puzzle.location; 
+        const { coordinates: originalCoordinates } = puzzle.location;
+        let isCorrect = false;
+        let scoreAdjustment = 0;
 
         const distance = calculateDistance(guessedLocation, originalCoordinates);
-        if (distance > accuracyMargin) {
-            throw new ApiError(400, "Guess location is not accurate enough");
+        if (distance <= accuracyMargin) {
+            isCorrect = true;
+            scoreAdjustment += 50; 
         }
 
+        if (hintsOpened === 1) {
+            scoreAdjustment -= 10;
+        } else if (hintsOpened === 2) {
+            scoreAdjustment -= 30;
+        }
+
+        // Adjust score based on time taken (> 15 minutes)
+        const timeLimit = 15 * 60 * 1000; // 15 minutes in milliseconds
+        if (timeTaken > timeLimit) {
+            const extraMinutes = Math.floor((timeTaken - timeLimit) / (2 * 60 * 1000)); // Every 2 extra minutes
+            scoreAdjustment -= extraMinutes;
+        }
+
+        // Check if participant exists in hunt
         let participant = hunt.participants.find((p) => p.user.toString() === userId);
         if (!participant) {
-            participant = { user: userId, guesses: [] };
+            participant = { user: userId, guesses: [], points: 0 }; // Initialize with 0 points
             hunt.participants.push(participant);
         }
 
+        // Update participant's score
+        participant.points = (participant.points || 0) + scoreAdjustment;
+
+        // Add guess data to participant's guesses array
         participant.guesses.push({
             guessedLocation: {
                 coordinates: guessedLocation,
             },
             imageUrl,
-            timestamp: new Date()
+            hintsOpened,
+            timestamp: new Date(),
         });
 
+        // Save hunt document
         await hunt.save();
 
-        
-
-        return res.status(200).json(new ApiResponse('Guess submitted successfully', { imageUrl }));
+        // Clear leaderboard cache in Redis
+        await redis.del(`leaderboard_${huntId}`);
+        return res.status(200).json(new ApiResponse('Guess submitted successfully', { imageUrl, isCorrect, pointsEarned: scoreAdjustment }));
     } catch (error) {
         throw new Error(error);
     }
@@ -216,13 +240,51 @@ const getParticipant= asyncHandler(async(req,res)=>{
         if (!hunt) {
             throw new ApiError(404, "Hunt not found or you're not authorized to view participants.");
         }
+        const sortedParticipants = hunt.participants
+            .map(participant => ({
+                user: participant.user,
+                score: participant.leaderboard.score,
+                imageUrl: participant.user.guesses?.[0]?.imageUrl || null // Get the first image URL if it exists
+            }))
+            .sort((a, b) => b.score - a.score); 
 
-        return res.status(200).json(new ApiResponse(200, hunt.participants, "Participants fetched successfully"));
+        return res.status(200).json(new ApiResponse(200, sortedParticipants, "Participants fetched successfully"));
     
 }catch (error) {
    throw new Error(error) 
 }
 })
+
+const isImageCorrect= asyncHandler(async(req,res)=>{
+    const {isCorrect, huntId,userId}= req.body
+    if(!isCorrect || !huntId|| !userId){
+        throw new ApiError(400, "All field is required")
+    }
+try {
+        let scoreAdj=0
+        if(isCorrect==true){
+            scoreAdj+= 30
+        }
+        else {
+            throw new ApiError(400, "Wrong image uploaded")
+        }
+        const hunt = await HuntModel.findById(huntId)
+        if(!hunt){
+            throw new ApiError(400, "Failed to fetch hunt")
+        }
+        const User = await hunt.findById(userId)
+        if(!User){
+            throw new ApiError(400, "Failed to fetch user")
+        }
+        User.points += scoreAdj
+        await HuntModel.save()
+        return res.status(200)
+        .json(new ApiResponse(200, User.points, "Points updates sucessfully"))
+} catch (error) {
+     throw new Error(error)
+}
+})
+
 
 
 export{
@@ -232,5 +294,6 @@ export{
     participate,
     yourHunts,
     submitGuess,
-    getParticipant
+    getParticipant,
+    isImageCorrect
 }

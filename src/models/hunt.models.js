@@ -8,8 +8,6 @@ const participantSchema = new mongoose.Schema({
     },
     guesses: [
         {
-            
-
             guessedLocation: {
                 coordinates: { type: [Number], required: true } 
             },
@@ -17,13 +15,22 @@ const participantSchema = new mongoose.Schema({
                 type: String,
                 default: ""
             },
+            hintsOpened:{
+                type: Number,
+                require: true
+            },
             timestamp: {
                 type: Date,
                 default: Date.now
             }
         }
-    ]
+    ],
+    points: {
+        type: Number,
+        default: 0 
+    },
 });
+
 const huntSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -52,6 +59,12 @@ const huntSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
+    level: {
+        type: String,
+        enum: ['easy', 'medium', 'hard'],
+        required: true
+    },
+
     puzzles: [
         {
             puzzleText: {
@@ -69,7 +82,7 @@ const huntSchema = new mongoose.Schema({
                     },
                     level: {
                         type: String,
-                        enum: ['easy', 'hard'], // Specifies hint level
+                        enum: ['1', '2'], // Specifies hint level
                         required: true
                     }
                 }
@@ -80,22 +93,39 @@ const huntSchema = new mongoose.Schema({
             }
         }
     ],
-    participants: [participantSchema], 
-    leaderboard: [
-        {
-            user: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'User'
-            },
-            score: {
-                type: Number,
-                default: 0
-            },
-            timeCompleted: Date
-        }
-    ]
+    validate: {
+        validator: function (puzzles) {
+            const levelPuzzleLimits = {
+                easy: 5,
+                medium: 8,
+                hard: 10
+            };
+            return puzzles.length <= (levelPuzzleLimits[this.level] || 0);
+        },
+        message: props => `Number of puzzles exceeds the limit for level ${props.instance.level}`
+    },
+
+    participants: [participantSchema]
 }, { timestamps: true });
 
+// Index for efficient querying based on start and end times
 huntSchema.index({ startTime: 1, endTime: 1 });
+
+// Pre-save middleware to set points based on difficulty level
+huntSchema.pre('save', function (next) {
+    const levelPointsMap = {
+        easy: 250,
+        medium: 400,
+        hard: 500
+    };
+
+    // If participants are newly added, initialize their points based on hunt level
+    this.participants = this.participants.map(participant => ({
+        ...participant,
+        points: levelPointsMap[this.level] || 0
+    }));
+
+    next();
+});
 
 export const HuntModel = mongoose.model("Hunt", huntSchema);

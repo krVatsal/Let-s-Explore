@@ -1,4 +1,3 @@
-// auth.route.js
 import { Router } from "express";
 import passport from "passport";
 import bcrypt from "bcryptjs";
