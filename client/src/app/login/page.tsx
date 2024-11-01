@@ -42,7 +42,7 @@ export default function LoginPage() {
       });
 
       if (!response.ok) throw new Error("Login failed");
-      window.location.href = "/";
+      window.location.href = "/Event";  // Redirect to the event page after successful login
     } catch (error) {
       toast({
         title: "Error",

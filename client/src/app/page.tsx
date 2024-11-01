@@ -1,22 +1,14 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MapPinned, Compass, Trophy, Map } from "lucide-react";
-
+import  Navbar  from "@/components/ui/Navbar";
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] mix-blend-overlay opacity-5 bg-cover bg-center" />
-      
       <div className="relative">
-        <nav className="border-b border-emerald-500/10">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Map className="w-6 h-6 text-emerald-500" />
-              <span className="text-xl font-bold">MNNITHunt</span>
-            </div>
-       
-          </div>
-        </nav>
+      <Navbar/>
+    
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center space-y-8">

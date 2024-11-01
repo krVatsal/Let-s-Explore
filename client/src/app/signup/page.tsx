@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -61,7 +62,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519669417670-68775a50919c?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] opacity-20 bg-cover bg-center" />
-      
+  
       <Card className="w-full max-w-md relative bg-gray-800/90 dark:bg-gray-900/80 backdrop-blur-sm shadow-lg border border-gray-700">
         <div className="p-6 space-y-6">
           <div className="text-center space-y-2">

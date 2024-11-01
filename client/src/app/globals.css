@@ -26,6 +26,50 @@
     --radius: 0.75rem;
   }
 }
+@layer components {
+  .nav-btn {
+    @apply relative p-2 rounded-lg hover:bg-indigo-500 transition-all duration-300 hover:scale-110;
+  }
+  
+  .nav-tooltip {
+    @apply absolute hidden group-hover:block -bottom-10 left-1/2 transform -translate-x-1/2
+           bg-gray-900 text-white text-sm py-1 px-2 rounded whitespace-nowrap;
+  }
+
+  .game-card {
+    @apply bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300
+           hover:-translate-y-1 border-2 border-transparent hover:border-indigo-300;
+  }
+
+  .fun-button {
+    @apply transform hover:scale-105 transition-all duration-300 active:scale-95
+           shadow-md hover:shadow-xl font-bold;
+  }
+}
+
+/* Animated background pattern */
+body {
+  background-color: #f8fafc;
+  background-image: radial-gradient(#4f46e5 0.5px, transparent 0.5px), radial-gradient(#4f46e5 0.5px, #f8fafc 0.5px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  animation: backgroundMove 60s linear infinite;
+}
+
+@keyframes backgroundMove {
+  0% {
+    background-position: 0 0, 10px 10px;
+  }
+  100% {
+    background-position: 400px 400px, 410px 410px;
+  }
+}
+
+/* Bouncing animation for live indicator */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
 
 @layer base {
   * {
