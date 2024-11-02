@@ -6,18 +6,20 @@ import { HuntModel } from "../models/hunt.models.js";
 import redis from "ioredis";
 
 const createHunt = asyncHandler(async(req,res)=>{
-    const{name, description, puzzles, startTime, endTime ,createdBy}= req.body
+    const{name, description, puzzles, startTime, endTime ,createdBy,level}= req.body
 try {
-        if([name, description, puzzles, startTime, endTime ].some((field)=> field?.trim)===""){
+    console.log("1")
+        if([name, description, puzzles, startTime, endTime,level ].some((field)=> field?.trim)===""){
             throw new ApiError(500, "All fields are required")
         }
+        console.log("2")
         if (!puzzles || puzzles.length === 0) {
             throw new ApiError(500, "At least one puzzle is required");
         }
-    
+        console.log("3")
         puzzles.forEach((puzzle, index) => {
             const { puzzleText, location, hints, photoReq } = puzzle;
-    
+            console.log("4")
             if (!puzzleText || puzzleText.trim() === "") {
                 throw new ApiError(500, `Puzzle ${index + 1}: puzzleText is required`);
             }
@@ -35,7 +37,7 @@ try {
             throw new ApiError(400, "Start time must be before end time")
         }
       const hunt = await HuntModel.create({
-        name, description, puzzles, startTime, endTime ,createdBy
+        name, description, puzzles, startTime, endTime ,createdBy, level
       })
       if(!hunt){
         throw new ApiError(500, "Failed to create the hunt")

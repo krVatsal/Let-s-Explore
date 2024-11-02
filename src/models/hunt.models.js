@@ -15,9 +15,9 @@ const participantSchema = new mongoose.Schema({
                 type: String,
                 default: ""
             },
-            hintsOpened:{
+            hintsOpened: {
                 type: Number,
-                require: true
+                required: true
             },
             timestamp: {
                 type: Date,
@@ -64,7 +64,6 @@ const huntSchema = new mongoose.Schema({
         enum: ['easy', 'medium', 'hard'],
         required: true
     },
-
     puzzles: [
         {
             puzzleText: {
@@ -93,23 +92,18 @@ const huntSchema = new mongoose.Schema({
             }
         }
     ],
-    validate: {
-        validator: function (puzzles) {
-            const levelPuzzleLimits = {
-                easy: 5,
-                medium: 8,
-                hard: 10
-            };
-            return puzzles.length <= (levelPuzzleLimits[this.level] || 0);
-        },
-        message: props => `Number of puzzles exceeds the limit for level ${props.instance.level}`
-    },
-
     participants: [participantSchema]
 }, { timestamps: true });
 
-// Index for efficient querying based on start and end times
-huntSchema.index({ startTime: 1, endTime: 1 });
+// Custom validation for puzzles count based on level
+huntSchema.path('puzzles').validate(function (puzzles) {
+    const levelPuzzleLimits = {
+        easy: 5,
+        medium: 8,
+        hard: 10
+    };
+    return puzzles.length <= (levelPuzzleLimits[this.level] || 0);
+}, props => `Number of puzzles exceeds the limit for level ${props.instance.level}`);
 
 // Pre-save middleware to set points based on difficulty level
 huntSchema.pre('save', function (next) {
