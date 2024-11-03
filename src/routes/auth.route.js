@@ -8,16 +8,27 @@ const router = Router();
 // Google authentication routes
 router.route('/google').get(passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.route('/google/callback').get(passport.authenticate('google', {
-    successRedirect: '/',
+    successRedirect: 'http://localhost:3000/Event',
     failureRedirect: '/login'
 }));
 
 // Local login route
-router.route("/login").post(passport.authenticate('local', {
-    successRedirect: '/',
-    failureRedirect: '/login',
-    failureFlash: false
-}));
+router.route("/login").post((req, res, next) => {
+    console.log("Login attempt:", req.body); // Logs the login attempt
+    passport.authenticate('local', (err, user, info) => {
+        if (err) return next(err);
+        if (!user) {
+            console.log("Login failed:", info);
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+        req.logIn(user, (err) => {
+            if (err) return next(err);
+            console.log("Login successful:", user);
+            return res.status(200).json({ message: "Logged in successfully" });
+        });
+    })(req, res, next);
+});
+
 
 // Registration route
 router.route("/signup").post(async (req, res, next) => {

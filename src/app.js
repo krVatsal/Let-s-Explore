@@ -42,10 +42,13 @@ passport.use(new LocalStrategy({
         if (!user) {
             return done(null, false, { message: 'Incorrect email or password.' });
         }
-        const isMatch = await bcrypt.compare(password, user.password);
+        console.log("1")
+        const isMatch = bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log("3")
             return done(null, false, { message: 'Incorrect email or password.' });
         }
+        console.log("2")
         return done(null, user);
     } catch (err) {
         return done(err);
@@ -55,7 +58,7 @@ passport.use(new LocalStrategy({
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback"
+    callbackURL: "http://localhost:5217/auth/google/callback"
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         let user = await User.findOne({ googleId: profile.id });
