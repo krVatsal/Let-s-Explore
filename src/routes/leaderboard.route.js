@@ -1,14 +1,13 @@
 import { Router } from "express";
 import {
-    joinEvent,
-    getLeaderboard,
-    updateGuess
-} from "../controllers/leaderboard.controller.js"; // Ensure correct path and `.js` extension
+    getLeaderboard, getScore
+} from "../controllers/leaderboard.controller.js"; 
+import { isVerified } from "../middlewares/auth.middleware.js";
 
 const router = Router();
+ 
+router.route("/leaderboard/:huntId", isVerified).get(getLeaderboard); 
+router.route("/score/:huntId", isVerified).get(getScore); 
 
-router.route("/joinEvent").post(joinEvent); 
-router.route("/leaderboard/:huntId").get(getLeaderboard); 
-router.route("/updateGuess").put(updateGuess);
 
 export default router;

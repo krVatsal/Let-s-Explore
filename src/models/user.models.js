@@ -9,7 +9,6 @@ const userSchema = new mongoose.Schema({
     },
     lastName: {
         type: String,
-        required: true,
         trim: true
     },
     email: {
@@ -40,11 +39,7 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    category: {
-        type: [String],
-        default: ["News"]
 
-    }
 });
 
 userSchema.pre('save', async function(next) {

@@ -14,8 +14,7 @@ import MongoStore from "connect-mongo";
 import mongoose from "mongoose";
 import userAuthRoute from "./routes/auth.route.js";
 import participantRoute from "./routes/participant.route.js";
-import leaderboard from "./routes/leaderboard.route.js"
-// import leaderboardRoute from "./routes/leaderboard.route.js"; // Renamed `lbd` to `leaderboardRoute` for clarity
+import leaderboardRoute from "./routes/leaderboard.route.js";
 
 dotenv.config({ path: '../.env' });
 
@@ -23,6 +22,7 @@ const app = express();
 app.use(cookieParser());
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
+    // origin: "http://localhost:3000",
     credentials: true,
 }));
 
@@ -32,6 +32,7 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 
+// Configure Passport's local strategy for login
 passport.use(new LocalStrategy({
     usernameField: 'email',
     passwordField: 'password'
@@ -41,10 +42,13 @@ passport.use(new LocalStrategy({
         if (!user) {
             return done(null, false, { message: 'Incorrect email or password.' });
         }
-        const isMatch = await bcrypt.compare(password, user.password);
+        console.log("1")
+        const isMatch = bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log("3")
             return done(null, false, { message: 'Incorrect email or password.' });
         }
+        console.log("2")
         return done(null, user);
     } catch (err) {
         return done(err);
@@ -54,7 +58,7 @@ passport.use(new LocalStrategy({
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback"
+    callbackURL: "http://localhost:5217/auth/google/callback"
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         let user = await User.findOne({ googleId: profile.id });
@@ -88,10 +92,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: 'mongodb://localhost:27017/yourDatabase',
-        mongooseConnection: mongoose.connection,
+        mongoUrl: 'mongodb://localhost:27017/MnnitHunt',
         ttl: 14 * 24 * 60 * 60,
-        autoRemove: 'native',
     }),
     cookie: {
         maxAge: 14 * 24 * 60 * 60 * 1000,
@@ -102,16 +104,9 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
-const corsOptions = {
-  origin: 'http://localhost:3000', // Replace with your frontend URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
-  credentials: true, // Allow cookies from the frontend
-};
 
-app.use(cors(corsOptions));
 app.use("/auth", userAuthRoute);
 app.use("/api/v1", participantRoute);
-app.use("api/lb",leaderboard);
- // Use `leaderboardRoute` instead of `lbd`
+app.use("/api/v1", leaderboardRoute);
 
 export default app;
