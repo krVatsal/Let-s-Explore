@@ -20,7 +20,7 @@ router.route("/login").post(passport.authenticate('local', {
 }));
 
 // Registration route
-router.route("/register").post(async (req, res, next) => {
+router.route("/signup").post(async (req, res, next) => {
     const { email, password, firstName, lastName } = req.body;
 
     try {
