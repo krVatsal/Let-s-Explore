@@ -1,10 +1,8 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/ui/Navbar";
 import EventCard from "@/components/ui/EventCard";
 import CreateEventForm from "@/components/ui/CreateEventForm";
-import LeaderboardModal from "@/components/ui/LeaderboardModal";
 
 export default function App() {
   const [liveEvents, setLiveEvents] = useState([]);
@@ -14,10 +12,10 @@ export default function App() {
   useEffect(() => {
     async function fetchEvents() {
       try {
-        const liveHunts = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/liveHunts`);
+        const liveHunts = await fetch(`http://localhost:3000/liveHunts`);
         const livedata = await liveHunts.json();
 
-        const upcomingHunts = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upcomingHunts`);
+        const upcomingHunts = await fetch(`http://localhost:3000/upcomingHunts`);
         const upcomingdata = await upcomingHunts.json();
 
         setLiveEvents(livedata || []);
@@ -56,7 +54,7 @@ export default function App() {
 
               {/* Upcoming Events Section */}
               <section className="bg-white shadow-lg rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-blue-700 mb-6 border-b pb-2">Upcoming Events</h2>
+                <h2 className="text-2xl font-bold text-emerald-700 mb-6 border-b pb-2">Upcoming Events</h2>
                 <div className="grid gap-6">
                   {upcomingEvents.length > 0 ? (
                     upcomingEvents.map((event, index) => (

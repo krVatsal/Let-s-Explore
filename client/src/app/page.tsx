@@ -30,7 +30,7 @@ export default function Home() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
               <Button asChild size="lg" className="text-lg bg-emerald-600 hover:bg-emerald-500 text-white button-glow">
-                <Link href="/signup">Start Your Hunt</Link>
+                <Link href="/auth/signup">Start Your Hunt</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="text-lg border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10">
                 <Link href="/login">Continue Hunt</Link>
