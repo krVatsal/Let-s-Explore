@@ -49,13 +49,16 @@ try {
 }
 })
 
+
 const getLiveHunts= asyncHandler(async(req, res)=>{
     try {
         const currentTime= new Date()
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const currentTimeUTC = new Date(currentTime.getTime() + istOffset);
         const liveHunts = await HuntModel.find({
-            startTime: {$lte: currentTime},
-            endTime: {$gte: currentTime},
-        }).populate('createdBy', 'name')
+            startTime: {$lte: currentTimeUTC},
+            endTime: {$gte: currentTimeUTC},
+        })
         if(!liveHunts){
             throw new ApiError(500, "Failed to fetch live hunts")
         }

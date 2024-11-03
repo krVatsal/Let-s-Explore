@@ -3,8 +3,8 @@ import { getLiveHunts, getUpcomingEvents, createHunt, participate, yourHunts, su
 import { isVerified } from "../middlewares/auth.middleware.js";
 import {upload} from "../middlewares/multer.middleware.js"
 const router= Router()
-router.route("/liveHunts").get(getLiveHunts)
-router.route("/upcomingHunts").get(getUpcomingEvents)
+router.route("/liveHunts", isVerified).get(getLiveHunts)
+router.route("/upcomingHunts", isVerified).get(getUpcomingEvents)
 router.route("/createHunt", isVerified).post(createHunt)
 router.route("/participate", isVerified).post(participate)
 router.route("/yourHunts", isVerified).get(yourHunts)
