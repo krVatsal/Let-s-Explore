@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MapPin, Trophy, Upload, Clock, Users } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { MapPin, Trophy, Upload, Clock, Users, Lock, Unlock, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PuzzleMap } from "@/components/puzzle/PuzzleMap";
+import { PuzzleProgress } from "@/components/puzzle/PuzzleProgress";
+import { PuzzleHints } from "@/components/puzzle/PuzzleHints";
+import { PuzzleStatusCards } from "@/components/puzzle/PuzzleStatusCards";
 
 const formSchema = z.object({
   answer: z.string().min(1, "Answer is required"),
@@ -34,6 +37,9 @@ const MOCK_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 2, name: "Sarah Chen", score: 2300, solved: 4, time: "1h 45m" },
   { rank: 3, name: "Raj Patel", score: 2100, solved: 4, time: "2h 10m" },
 ];
+
+const TOTAL_PUZZLES = 10;
+const CURRENT_PUZZLE = 4;
 
 export default function PuzzlePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,7 +98,7 @@ export default function PuzzlePage() {
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
               Decode the ancient riddle and find the secret entrance to MNNIT's mystical library.
             </p>
-            {/* <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-4">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-emerald-500" />
                 <span>30 minutes remaining</span>
@@ -101,8 +107,11 @@ export default function PuzzlePage() {
                 <Users className="w-5 h-5 text-emerald-500" />
                 <span>42 hunters active</span>
               </div>
-            </div> */}
+            </div>
           </div>
+
+          {/* Progress Bar */}
+          <PuzzleProgress currentPuzzle={CURRENT_PUZZLE} totalPuzzles={TOTAL_PUZZLES} />
 
           {/* Main Content */}
           <div className="grid md:grid-cols-3 gap-8">
@@ -134,25 +143,7 @@ export default function PuzzlePage() {
                     </div>
                   </TabsContent>
                   <TabsContent value="hints">
-                    <div className="space-y-4">
-                      <div className="p-4 border border-emerald-500/20 rounded-lg">
-                        <p className="text-sm text-gray-400">
-                          Hint 1: Look for a place where modern technology meets traditional learning.
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="w-full border-emerald-500/20"
-                        onClick={() => {
-                          toast({
-                            title: "Hint Unlocked!",
-                            description: "Check near the central computing facility.",
-                          });
-                        }}
-                      >
-                        Unlock Hint 2 (-50 points)
-                      </Button>
-                    </div>
+                    <PuzzleHints />
                   </TabsContent>
                 </Tabs>
               </Card>
@@ -181,7 +172,7 @@ export default function PuzzlePage() {
                         Upload Photo
                       </Button>
                       
-                      <FormField
+                      {/* <FormField
                         control={form.control}
                         name="answer"
                         render={({ field }) => (
@@ -196,7 +187,7 @@ export default function PuzzlePage() {
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
+                      /> */}
                     </div>
 
                     <Button
@@ -212,6 +203,9 @@ export default function PuzzlePage() {
                   </form>
                 </Form>
               </Card>
+
+              {/* Puzzle Status Cards */}
+              <PuzzleStatusCards currentPuzzle={CURRENT_PUZZLE} totalPuzzles={TOTAL_PUZZLES} />
             </div>
 
             {/* Leaderboard Section */}
