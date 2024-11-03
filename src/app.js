@@ -105,7 +105,8 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use("/auth", userAuthRoute);
+
+app.use("/auth", userAuthRoute); 
 app.use("/api/v1", participantRoute);
 app.use("/api/v1", leaderboardRoute);
 
