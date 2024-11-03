@@ -31,10 +31,11 @@ export default function LoginPage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>, event:any) {
+    event.preventDefault()
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:3000/login`, {
+      const response = await fetch(`http://localhost:5217/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -66,16 +67,16 @@ export default function LoginPage() {
             <p className="text-gray-300">Continue your adventure</p>
           </div>
 
+<a href="http://localhost:5217/auth/google">
           <Button
             variant="outline"
-            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`}
             disabled={isLoading}
             className="w-full group border border-emerald-600 text-emerald-600 hover:bg-emerald-700"
           >
             <Chrome className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" />
             Continue with Google
           </Button>
-          
+          </a>
           <div className="relative">
             <Separator />
             <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 bg-gray-800 text-xs text-gray-500">

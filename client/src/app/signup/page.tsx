@@ -39,7 +39,7 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:3000/signup`, {
+      const response = await fetch(`http://localhost:5217/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -47,7 +47,7 @@ export default function SignupPage() {
       });
 
       if (!response.ok) throw new Error("Signup failed");
-      window.location.href = "/login";
+      window.location.href = "/Event";
     } catch (error) {
       toast({
         title: "Error",
@@ -70,16 +70,16 @@ export default function SignupPage() {
             <h1 className="text-3xl font-bold text-white">Join the Hunt!</h1>
             <p className="text-gray-300">Begin your treasure hunting journey</p>
           </div>
-
+          <a href="http://localhost:5217/auth/google">
           <Button
             variant="outline"
-            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`}
             disabled={isLoading}
             className="w-full group border border-emerald-600 text-emerald-600 hover:bg-emerald-700"
           >
             <Chrome className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" />
             Sign up with Google
           </Button>
+          </a>
           
           <div className="relative">
             <Separator />
