@@ -48,6 +48,7 @@ export default function SignupPage() {
 
       if (!response.ok) throw new Error("Signup failed");
       window.location.href = "/Event";
+      window.location.href = "/Event";
     } catch (error) {
       toast({
         title: "Error",
@@ -58,6 +59,7 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">

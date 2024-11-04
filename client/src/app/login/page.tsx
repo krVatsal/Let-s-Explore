@@ -33,6 +33,8 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>, event:any) {
     event.preventDefault()
+  async function onSubmit(values: z.infer<typeof formSchema>, event:any) {
+    event.preventDefault()
     setIsLoading(true);
     try {
       const response = await fetch(`http://localhost:5217/auth/login`, {
@@ -54,7 +56,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519669417670-68775a50919c?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] opacity-20 bg-cover bg-center" />

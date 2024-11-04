@@ -11,7 +11,7 @@ type Location = {
 
 type PuzzleMapProps = {
   onLocationSelect: (location: Location) => void;
-  selectedLocation: Location | null;
+  selectedLocation?: Location | null; // Allow `undefined` or `null`
 };
 
 export function PuzzleMap({ onLocationSelect, selectedLocation }: PuzzleMapProps) {
@@ -26,8 +26,8 @@ export function PuzzleMap({ onLocationSelect, selectedLocation }: PuzzleMapProps
     const y = e.clientY - rect.top;
 
     // Convert pixel coordinates to lat/lng (mock conversion)
-    const lat = (rect.height - y) / rect.height * 90;
-    const lng = (x / rect.width * 360) - 180;
+    const lat = ((rect.height - y) / rect.height) * 90;
+    const lng = (x / rect.width) * 360 - 180;
 
     onLocationSelect({ lat, lng });
   };
@@ -48,7 +48,8 @@ export function PuzzleMap({ onLocationSelect, selectedLocation }: PuzzleMapProps
         ))}
       </div>
 
-      {selectedLocation && (
+      {/* Only render marker if selectedLocation is defined */}
+      {selectedLocation ? (
         <div 
           className="absolute animate-bounce"
           style={{
@@ -59,9 +60,7 @@ export function PuzzleMap({ onLocationSelect, selectedLocation }: PuzzleMapProps
         >
           <MapPin className="w-6 h-6 text-emerald-500" />
         </div>
-      )}
-
-      {!selectedLocation && (
+      ) : (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <MapPin className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
