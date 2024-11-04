@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PuzzleProgress } from "@/components/puzzle/PuzzleProgress";
 import { PuzzleHints } from "@/components/puzzle/PuzzleHints";
-import { DynamicPuzzleCards } from "@/components/puzzle/DynamicPuzzleCards";
 import { LocationSharing } from "@/components/puzzle/LocationSharing";
 
 const formSchema = z.object({
@@ -44,6 +43,7 @@ const CURRENT_PUZZLE = 4;
 export default function PuzzlePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -69,26 +69,57 @@ export default function PuzzlePage() {
     loadPuzzleData();
   }, []);
 
+  const handlePhotoUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setPhoto(file);
+      toast({
+        title: "Photo Selected",
+        description: `Selected file: ${file.name}`,
+      });
+    }
+  };
+  const [hintsOpened, setHintsOpened] = useState(0);
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+  
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const formData = new FormData();
+      formData.append("answer", values.answer);
+  
+      if (photo) {
+        formData.append("photo", photo);
+      }
+      formData.append("hintsOpened", hintsOpened)
+  
+      const response = await fetch("http://localhost:5217/api/v1/submitGuess", {
+        method: "POST",
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to submit answer. Please try again.");
+      }
+  
+      const result = await response.json();
       toast({
         title: "Answer Submitted!",
-        description: "Your answer is being verified.",
+        description: result.message || "Your answer is being verified.",
       });
+  
       form.reset();
+      setPhoto(null);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to submit answer. Please try again.",
+        description: error.message || "Failed to submit answer. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   }
+  
 
   if (error) {
     return (
@@ -164,12 +195,11 @@ export default function PuzzlePage() {
                         <li>Find the location described in the riddle</li>
                         <li>Share your current location</li>
                         <li>Submit a photo of the location (optional)</li>
-                        <li>Enter the secret code found at the location</li>
                       </ul>
                     </div>
                   </TabsContent>
                   <TabsContent value="hints">
-                    <PuzzleHints />
+                  <PuzzleHints onHintsChange={setHintsOpened} />
                   </TabsContent>
                 </Tabs>
               </Card>
@@ -178,7 +208,6 @@ export default function PuzzlePage() {
               <Card className="glass-card p-6">
                 <LocationSharing />
               </Card>
-
               <Card className="glass-card p-6">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -187,16 +216,19 @@ export default function PuzzlePage() {
                         type="button"
                         variant="outline"
                         className="flex-1 border-emerald-500/20"
-                        onClick={() => {
-                          toast({
-                            title: "Photo Upload",
-                            description: "This feature will be available soon!",
-                          });
-                        }}
+                        onClick={() => document.getElementById("photo-input").click()}
                       >
                         <Upload className="w-4 h-4 mr-2" />
                         Upload Photo
                       </Button>
+                      <input
+                        type="file"
+                        id="photo-input"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        style={{ display: "none" }}
+                      />
+                    </div>
                       
                       {/* <FormField
                         control={form.control}
@@ -214,7 +246,6 @@ export default function PuzzlePage() {
                           </FormItem>
                         )}
                       /> */}
-                    </div>
 
                     <Button
                       type="submit"
@@ -230,8 +261,6 @@ export default function PuzzlePage() {
                 </Form>
               </Card>
 
-              {/* Dynamic Puzzle Cards */}
-              <DynamicPuzzleCards isLoading={isLoading} />
             </div>
 
             {/* Leaderboard Section */}

@@ -1,4 +1,5 @@
-import { useState, useContext, useCallback, useMemo } from 'react';
+"use client"
+import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Calendar, Clock, Lightbulb, PlusCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,23 @@ export default function CreateEventForm() {
     }
   ), []);
 
-  const { user } = useContext(AuthContext);
+  const authContext = useContext(AuthContext);
+
+  if (!authContext) {
+    throw new Error("AuthContext is not available.");
+  }
+
+  const { user, setUser } = authContext;
+
+  useEffect(() => {
+    if (user) {
+      console.log("User data:", user);
+    } else {
+      console.log("User is not logged in");
+    }
+  }, [user]);
+
+
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,14 +68,18 @@ export default function CreateEventForm() {
       alert("Start time must be before end time.");
       return;
     }
+    const formattedPuzzles = puzzles.map((puzzle) => ({
+      ...puzzle,
+      hints: puzzle.hints.map((hint) => ({ hint })),
+  }));
 
     const huntData = {
       name,
       description,
-      puzzles,
+      puzzles: formattedPuzzles,
       startTime,
       endTime,
-      createdBy: user?.id || "UnknownUser",
+      createdBy: user?._id || "UnknownUser",
       level: difficulty,
     };
 

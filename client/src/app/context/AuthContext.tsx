@@ -1,4 +1,3 @@
-// AuthContext.tsx
 "use client"
 import { createContext, useState, ReactNode, useEffect } from 'react';
 
@@ -7,7 +6,6 @@ export type User = {
   _id: string;
   email: string;
   name: string;
-  // Add other fields as needed
 } | null;
 
 type AuthContextType = {
@@ -22,9 +20,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>(null);
 
   useEffect(() => {
-    // Placeholder: Load user data if available (e.g., from localStorage or an API call)
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("http://localhost:5217/auth/user", {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data);
+        } else {
+          setUser(null); // User is not authenticated
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+      }
+    };
+
+    fetchUser();
   }, []);
 
   return (

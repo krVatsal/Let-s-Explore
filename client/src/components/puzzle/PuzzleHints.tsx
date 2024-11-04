@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Lock, Unlock, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useForm } from "react-hook-form";
 
 const HINTS = [
   {
@@ -19,7 +20,7 @@ const HINTS = [
   }
 ];
 
-export function PuzzleHints() {
+export function PuzzleHints({ onHintsChange }: { onHintsChange: (hintsOpened: number) => void }) {
   const [unlockedHints, setUnlockedHints] = useState<number[]>([]);
   const { toast } = useToast();
 
@@ -30,7 +31,11 @@ export function PuzzleHints() {
       title: `Hint ${hintId} Unlocked!`,
       description: `-${cost} points`,
     });
-    setUnlockedHints([...unlockedHints, hintId]);
+    const updatedHints = [...unlockedHints, hintId];
+    setUnlockedHints(updatedHints);
+
+    // Update the hintsOpened count
+    onHintsChange(updatedHints.length);
   };
 
   return (
