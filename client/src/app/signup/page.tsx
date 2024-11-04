@@ -39,7 +39,7 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, {
+      const response = await fetch('http://localhost:5217/auth/signup', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -47,7 +47,7 @@ export default function SignupPage() {
       });
 
       if (!response.ok) throw new Error("Signup failed");
-      window.location.href = "/auth/login";
+      window.location.href = "/Event";
     } catch (error) {
       toast({
         title: "Error",
@@ -58,6 +58,7 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
@@ -73,7 +74,7 @@ export default function SignupPage() {
 
           <Button
             variant="outline"
-            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`}
+            onClick={() => window.location.href = 'http://localhost:5217/auth/google'}
             disabled={isLoading}
             className="w-full group border border-emerald-600 text-emerald-600 hover:bg-emerald-700"
           >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Calendar, Clock, MapPin, Image as ImageIcon, Lightbulb, PlusCircle, Sparkles, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,69 +9,111 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PuzzleMap } from '@/components/puzzle/PuzzleMap';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch'; // Assuming you have a Switch component for toggling
+import axios from 'axios';
+import  {AuthContext}  from '@/app/context/AuthContext'; // Assuming you have an AuthContext
 
-type Challenge = {
-  description: string;
+type Puzzle = {
+  puzzleText: string;
   hints: string[];
-  location: { lat: number; lng: number } | null;
-  image: string | null;
-  difficulty: string;
-  isImageRequired: boolean;
+  location: { coordinates: [number, number] } | null;
+  photoReq: boolean;
 };
 
 export default function CreateEventForm() {
-  const [title, setTitle] = useState('');
+  const [name, setName] = useState(''); // Renamed from title to name
   const [description, setDescription] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [location, setLocation] = useState('');
-  const [difficulty, setDifficulty] = useState('medium');
-  const [challenges, setChallenges] = useState<Challenge[]>([{
-    description: '',
+  const [difficulty, setdifficulty] = useState('medium');
+  const [puzzles, setPuzzles] = useState<Puzzle[]>([{
+    puzzleText: '',
     hints: ['', ''],
     location: null,
-    image: null,
-    difficulty: 'medium',
-    isImageRequired: false,
+    photoReq: false,
   }]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { user } = useContext(AuthContext); // Assuming you have user info in AuthContext
+console.log(user);
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const formattedChallenges = challenges.map(challenge => ({
-      description: challenge.description,
-      hints: challenge.hints,
-      location: challenge.location,
-      image: challenge.image,
-      difficulty: challenge.difficulty,
-      isImageRequired: challenge.isImageRequired,
-    }));
 
-    console.log('Formatted Challenges:', formattedChallenges);
-    // Add your backend submission logic here
+    // Frontend Validation
+    if (!name.trim() || !description.trim() || !startTime || !endTime || !difficulty) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    if (puzzles.length === 0) {
+      alert("At least one puzzle is required.");
+      return;
+    }
+
+    for (let i = 0; i < puzzles.length; i++) {
+      const puzzle = puzzles[i];
+      if (!puzzle.puzzleText.trim()) {
+        alert(`Puzzle ${i + 1}: Puzzle text is required.`);
+        return;
+      }
+      // if (!puzzle.location || !puzzle.location.coordinates || puzzle.location.coordinates.length !== 2) {
+      //   alert(`Puzzle ${i + 1}: Valid location is required.`);
+      //   return;
+      // }
+      if (!Array.isArray(puzzle.hints) || puzzle.hints.length === 0) {
+        alert(`Puzzle ${i + 1}: At least one hint is required.`);
+        return;
+      }
+    }
+
+    if (new Date(startTime) >= new Date(endTime)) {
+      alert("Start time must be before end time.");
+      return;
+    }
+
+    // Prepare Data for Backend
+    const huntData = {
+      name,
+      description,
+      puzzles,
+      startTime,
+      endTime,
+      createdBy: user?.id || "UnknownUser", // Ensure you have user information
+      level : difficulty,
+    };
+
+    console.log('Formatted Hunt Data:', huntData);
+
+    try {
+      const response = await axios.post('/api/v1/createHunt', huntData);
+      console.log("Hunt created successfully", response.data);
+      // Optionally, reset the form or redirect the user
+    } catch (error) {
+      console.error("Error creating hunt:", error);
+      alert("There was an error creating the hunt. Please try again.");
+    }
   };
 
-  const addChallenge = () => {
-    setChallenges([...challenges, {
-      description: '',
+  const addPuzzle = () => {
+    setPuzzles([...puzzles, {
+      puzzleText: '',
       hints: ['', ''],
       location: null,
-      image: null,
-      difficulty: 'medium',
-      isImageRequired: false,
+      photoReq: false,
     }]);
   };
 
-  const updateChallenge = (index: number, field: keyof Challenge, value: any) => {
-    const updatedChallenges = [...challenges];
-    updatedChallenges[index] = { ...updatedChallenges[index], [field]: value };
-    setChallenges(updatedChallenges);
+  const updatePuzzle = (index: number, field: keyof Puzzle, value: any) => {
+    const updatedPuzzles = [...puzzles];
+    updatedPuzzles[index] = { ...updatedPuzzles[index], [field]: value };
+    setPuzzles(updatedPuzzles);
   };
 
-  const updateHint = (challengeIndex: number, hintIndex: number, value: string) => {
-    const updatedChallenges = [...challenges];
-    updatedChallenges[challengeIndex].hints[hintIndex] = value;
-    setChallenges(updatedChallenges);
+  const updateHint = (puzzleIndex: number, hintIndex: number, value: string) => {
+    const updatedPuzzles = [...puzzles];
+    if (!updatedPuzzles[puzzleIndex].hints) {
+      updatedPuzzles[puzzleIndex].hints = [];
+    }
+    updatedPuzzles[puzzleIndex].hints[hintIndex] = value;
+    setPuzzles(updatedPuzzles);
   };
 
   return (
@@ -86,10 +128,11 @@ export default function CreateEventForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <Input
-            placeholder="Hunt Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Hunt Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="bg-background/50 border-emerald-500/20"
+            required
           />
 
           <Textarea
@@ -97,6 +140,7 @@ export default function CreateEventForm() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="bg-background/50 border-emerald-500/20 min-h-[100px]"
+            required
           />
 
           <div className="grid grid-cols-2 gap-4">
@@ -106,19 +150,22 @@ export default function CreateEventForm() {
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 className="bg-background/50 border-emerald-500/20"
+                required
               />
             </div>
+
             <div>
               <Input
                 type="datetime-local"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 className="bg-background/50 border-emerald-500/20"
+                required
               />
             </div>
           </div>
 
-          <Select value={difficulty} onValueChange={setDifficulty}>
+          <Select value={difficulty} onValueChange={setdifficulty}>
             <SelectTrigger className="bg-background/50 border-emerald-500/20">
               <SelectValue placeholder="Select Difficulty" />
             </SelectTrigger>
@@ -131,46 +178,57 @@ export default function CreateEventForm() {
         </div>
 
         <div className="space-y-6">
-          {challenges.map((challenge, challengeIndex) => (
-            <div key={challengeIndex} className="p-4 border border-emerald-500/20 rounded-lg space-y-4">
-              <h3 className="font-semibold text-emerald-400">Challenge #{challengeIndex + 1}</h3>
-              
+          {puzzles.map((puzzle, puzzleIndex) => (
+            <div key={puzzleIndex} className="p-4 border border-emerald-500/20 rounded-lg space-y-4">
+              <h3 className="font-semibold text-emerald-400">Puzzle #{puzzleIndex + 1}</h3>
+
               <Textarea
-                placeholder="Challenge Description"
-                value={challenge.description}
-                onChange={(e) => updateChallenge(challengeIndex, 'description', e.target.value)}
+                placeholder="Puzzle Text"
+                value={puzzle.puzzleText}
+                onChange={(e) => updatePuzzle(puzzleIndex, 'puzzleText', e.target.value)}
                 className="bg-background/50 border-emerald-500/20"
+                required
               />
 
               <div className="space-y-2">
                 <p className="text-sm font-medium text-emerald-400">Hints</p>
-                {challenge.hints.map((hint, hintIndex) => (
+                {puzzle.hints.map((hint, hintIndex) => (
                   <Input
                     key={hintIndex}
                     placeholder={`Hint ${hintIndex + 1}`}
                     value={hint}
-                    onChange={(e) => updateHint(challengeIndex, hintIndex, e.target.value)}
+                    onChange={(e) => updateHint(puzzleIndex, hintIndex, e.target.value)}
                     className="bg-background/50 border-emerald-500/20"
+                    required
                   />
                 ))}
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => {
+                    const updatedPuzzles = [...puzzles];
+                    updatedPuzzles[puzzleIndex].hints.push('');
+                    setPuzzles(updatedPuzzles);
+                  }}
+                >
+                  Add Another Hint
+                </Button>
               </div>
 
               <div className="space-y-2">
                 <p className="text-sm font-medium text-emerald-400">Location</p>
                 <PuzzleMap
-                  selectedLocation={challenge.location}
-                  onLocationSelect={(loc) => updateChallenge(challengeIndex, 'location', loc)}
+                  selectedLocation={puzzle.location}
+                  onLocationSelect={(loc) => updatePuzzle(puzzleIndex, 'location', loc)}
                 />
               </div>
 
               <div className="flex items-center gap-4">
-             
-
                 <div className="flex items-center">
                   <span className="text-sm text-emerald-400 mr-2">Image Required</span>
                   <Switch
-                    checked={challenge.isImageRequired}
-                    onCheckedChange={(checked) => updateChallenge(challengeIndex, 'isImageRequired', checked)}
+                    checked={puzzle.photoReq}
+                    onCheckedChange={(checked) => updatePuzzle(puzzleIndex, 'photoReq', checked)}
                     className="bg-background/50 border-emerald-500/20"
                   />
                 </div>
@@ -182,10 +240,10 @@ export default function CreateEventForm() {
             type="button"
             variant="outline"
             className="w-full border-emerald-500/20"
-            onClick={addChallenge}
+            onClick={addPuzzle}
           >
             <PlusCircle className="w-4 h-4 mr-2" />
-            Add Challenge
+            Add Puzzle
           </Button>
         </div>
 

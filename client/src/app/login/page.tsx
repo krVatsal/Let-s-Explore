@@ -31,10 +31,11 @@ export default function LoginPage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>, event:any) {
+    event.preventDefault()
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const response = await fetch('http://localhost:5217/auth/login', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -53,7 +54,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519669417670-68775a50919c?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] opacity-20 bg-cover bg-center" />
@@ -68,7 +68,7 @@ export default function LoginPage() {
 
           <Button
             variant="outline"
-            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`}
+            onClick={() => window.location.href = 'http://localhost:5217/auth/google'}
             disabled={isLoading}
             className="w-full group border border-emerald-600 text-emerald-600 hover:bg-emerald-700"
           >
