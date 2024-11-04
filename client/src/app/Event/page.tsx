@@ -1,68 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/ui/Navbar";
-import {EventCard} from "@/components/events/EventCard";
+import { EventCard } from "@/components/events/EventCard";
 import CreateEventForm from "@/components/events/CreateEventForm";
 
-// Dummy data for events
-const DUMMY_LIVE_EVENTS = [
-  {
-    id: 1,
-    title: "Library Quest",
-    description: "Explore the hidden corners of MNNIT's central library in this exciting treasure hunt!",
-    startTime: "2024-03-20T10:00:00",
-    endTime: "2024-03-20T12:00:00",
-    location: "Central Library",
-    participants: 42,
-    totalPuzzles: 5,
-    difficulty: "Medium",
-    status: "live"
-  },
-  {
-    id: 2,
-    title: "Tech Trail",
-    description: "A thrilling hunt through MNNIT's computer science department. Solve puzzles and discover tech history!",
-    startTime: "2024-03-20T11:00:00",
-    endTime: "2024-03-20T13:00:00",
-    location: "CS Department",
-    participants: 28,
-    totalPuzzles: 4,
-    difficulty: "Hard",
-    status: "live"
-  }
-];
-
-const DUMMY_UPCOMING_EVENTS = [
-  {
-    id: 3,
-    title: "Garden Mysteries",
-    description: "Uncover the secrets hidden in MNNIT's botanical gardens. Perfect for nature lovers!",
-    startTime: "2024-03-25T14:00:00",
-    endTime: "2024-03-25T16:00:00",
-    location: "Botanical Garden",
-    participants: 15,
-    totalPuzzles: 3,
-    difficulty: "Easy",
-    status: "upcoming"
-  },
-  {
-    id: 4,
-    title: "Sports Complex Challenge",
-    description: "An adventurous hunt around MNNIT's sports facilities. Test your knowledge of sports!",
-    startTime: "2024-03-26T09:00:00",
-    endTime: "2024-03-26T11:00:00",
-    location: "Sports Complex",
-    participants: 20,
-    totalPuzzles: 6,
-    difficulty: "Medium",
-    status: "upcoming"
-  }
-];
+// API endpoints for fetching events
+const LIVE_EVENTS_API_URL = "/api/v1/liveHunts"; // Endpoint for live events
+const UPCOMING_EVENTS_API_URL = "/api/v1/upcomingHunts"; // Endpoint for upcoming events
 
 export default function EventsPage() {
-  const [liveEvents, setLiveEvents] = useState(DUMMY_LIVE_EVENTS);
-  const [upcomingEvents, setUpcomingEvents] = useState(DUMMY_UPCOMING_EVENTS);
+  const [liveEvents, setLiveEvents] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loadingLive, setLoadingLive] = useState(true);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(true);
+  const [errorLive, setErrorLive] = useState(null);
+  const [errorUpcoming, setErrorUpcoming] = useState(null);
+
+  useEffect(() => {
+    const fetchLiveEvents = async () => {
+      setLoadingLive(true);
+      try {
+        const response = await fetch(LIVE_EVENTS_API_URL);
+        if (!response.ok) {
+          throw new Error("Failed to fetch live events.");
+        }
+        const data = await response.json();
+        setLiveEvents(data); // Assuming data is an array of live events
+      } catch (err) {
+        setErrorLive(err.message);
+      } finally {
+        setLoadingLive(false);
+      }
+    };
+
+    const fetchUpcomingEvents = async () => {
+      setLoadingUpcoming(true);
+      try {
+        const response = await fetch(UPCOMING_EVENTS_API_URL);
+        if (!response.ok) {
+          throw new Error("Failed to fetch upcoming events.");
+        }
+        const data = await response.json();
+        setUpcomingEvents(data); // Assuming data is an array of upcoming events
+      } catch (err) {
+        setErrorUpcoming(err.message);
+      } finally {
+        setLoadingUpcoming(false);
+      }
+    };
+
+    fetchLiveEvents();
+    fetchUpcomingEvents();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,11 +74,15 @@ export default function EventsPage() {
                     {liveEvents.length} Active
                   </span>
                 </div>
-                <div className="grid gap-6">
-                  {liveEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </div>
+                {loadingLive && <div className="text-center text-lg">Loading live events...</div>}
+                {errorLive && <div className="text-center text-red-500">{errorLive}</div>}
+                {!loadingLive && !errorLive && (
+                  <div className="grid gap-6">
+                    {liveEvents.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* Upcoming Events Section */}
@@ -101,11 +95,15 @@ export default function EventsPage() {
                     {upcomingEvents.length} Scheduled
                   </span>
                 </div>
-                <div className="grid gap-6">
-                  {upcomingEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </div>
+                {loadingUpcoming && <div className="text-center text-lg">Loading upcoming events...</div>}
+                {errorUpcoming && <div className="text-center text-red-500">{errorUpcoming}</div>}
+                {!loadingUpcoming && !errorUpcoming && (
+                  <div className="grid gap-6">
+                    {upcomingEvents.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                )}
               </section>
             </div>
 
