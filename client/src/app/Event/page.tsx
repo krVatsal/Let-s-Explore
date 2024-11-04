@@ -1,4 +1,4 @@
-"use client";
+"use client"
 import { useEffect, useState } from "react";
 import Navbar from "@/components/ui/Navbar";
 import { EventCard } from "@/components/events/EventCard";
@@ -19,12 +19,14 @@ export default function EventsPage() {
         const liveResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/liveHunts`);
         if (!liveResponse.ok) throw new Error("Failed to fetch live events");
         const liveData = await liveResponse.json();
-        setLiveEvents(liveData.data || []);
+        console.log("Live Data:", liveData); // Debugging
+        setLiveEvents(Array.isArray(liveData.data) ? liveData.data : []); // Ensure it's an array
 
         const upcomingResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/upcomingHunts`);
         if (!upcomingResponse.ok) throw new Error("Failed to fetch upcoming events");
         const upcomingData = await upcomingResponse.json();
-        setUpcomingEvents(upcomingData.data || []);
+        console.log("Upcoming Data:", upcomingData); // Debugging
+        setUpcomingEvents(Array.isArray(upcomingData.data) ? upcomingData.data : []); // Ensure it's an array
       } catch (error) {
         setError(error.message);
         console.error("Failed to fetch events:", error);
@@ -39,11 +41,8 @@ export default function EventsPage() {
   // Function to format date for display
   const formatEventTime = (dateString) => {
     const date = parseISO(dateString); // Parse the ISO date string
-
-    // Create a new date object with the time adjusted to IST
     const istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
     const istDate = new Date(date.getTime() - istOffset);
-    
     return format(istDate, "MMM d, yyyy h:mm a"); // Format to IST
   };
 
@@ -79,9 +78,9 @@ export default function EventsPage() {
                         startTime: formatEventTime(event.startTime),
                         endTime: formatEventTime(event.endTime),
                         location: event.location || "Location not specified",
-                        participants: event.participants.length,
-                        totalPuzzles: event.puzzles.length,
-                        difficulty: event.level,
+                        participants: event.participants ? event.participants.length : 0,
+                        totalPuzzles: event.puzzles.length, // Check if puzzles exist
+                        difficulty: event.level || "Unknown", // Provide a fallback for difficulty
                         status: "live",
                       }} />
                     ))
@@ -115,9 +114,9 @@ export default function EventsPage() {
                         startTime: formatEventTime(event.startTime),
                         endTime: formatEventTime(event.endTime),
                         location: event.location || "Location not specified",
-                        participants: event.participants.length,
-                        totalPuzzles: event.puzzles.length,
-                        difficulty: event.level,
+                        participants: event.participants ? event.participants.length : 0,
+                        totalPuzzles:event.puzzles.length, // Check if puzzles exist
+                        difficulty: event.level || "Unknown", // Provide a fallback for difficulty
                         status: "upcoming",
                       }} />
                     ))

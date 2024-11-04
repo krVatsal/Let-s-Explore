@@ -26,6 +26,7 @@ type EventCardProps = {
 };
 
 export function EventCard({ event }: EventCardProps) {
+  console.log(event)
   const startDate = new Date(event.startTime);
   const endDate = new Date(event.endTime);
   const isLive = event.status === "live";
@@ -89,7 +90,7 @@ export function EventCard({ event }: EventCardProps) {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Puzzle className="w-4 h-4 text-emerald-500" />
-              <span>{event.puzzles.length} puzzles</span> {/* Adjusted puzzles */}
+              <span>{ event.totalPuzzles} puzzles</span> 
             </div>
           </div>
 
