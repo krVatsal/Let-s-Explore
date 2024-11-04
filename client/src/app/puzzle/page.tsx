@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,13 +9,13 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { MapPin, Trophy, Upload, Clock, Users, Lock, Unlock, CheckCircle2 } from "lucide-react";
+import { MapPin, Trophy, Upload, Clock, Users, Lock, Unlock, CheckCircle2, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PuzzleMap } from "@/components/puzzle/PuzzleMap";
 import { PuzzleProgress } from "@/components/puzzle/PuzzleProgress";
 import { PuzzleHints } from "@/components/puzzle/PuzzleHints";
-import { PuzzleStatusCards } from "@/components/puzzle/PuzzleStatusCards";
+import { DynamicPuzzleCards } from "@/components/puzzle/DynamicPuzzleCards";
+import { LocationSharing } from "@/components/puzzle/LocationSharing";
 
 const formSchema = z.object({
   answer: z.string().min(1, "Answer is required"),
@@ -44,7 +44,8 @@ const CURRENT_PUZZLE = 4;
 
 export default function PuzzlePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -54,16 +55,22 @@ export default function PuzzlePage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!selectedLocation) {
-      toast({
-        title: "Location Required",
-        description: "Please mark the location on the map",
-        variant: "destructive",
-      });
-      return;
-    }
+  useEffect(() => {
+    const loadPuzzleData = async () => {
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsLoading(false);
+      } catch (err) {
+        setError("Failed to load puzzle data. Please try again.");
+        setIsLoading(false);
+      }
+    };
 
+    loadPuzzleData();
+  }, []);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
       // Simulate API call
@@ -73,7 +80,6 @@ export default function PuzzlePage() {
         description: "Your answer is being verified.",
       });
       form.reset();
-      setSelectedLocation(null);
     } catch (error) {
       toast({
         title: "Error",
@@ -83,6 +89,26 @@ export default function PuzzlePage() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="p-6 text-center space-y-4 max-w-md mx-auto">
+          <div className="text-red-500">
+            <CheckCircle2 className="w-12 h-12 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold">Error Loading Puzzle</h2>
+          <p className="text-gray-400">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500"
+          >
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -137,7 +163,7 @@ export default function PuzzlePage() {
                       <h3 className="font-semibold mb-2">Instructions:</h3>
                       <ul className="list-disc list-inside space-y-2 text-sm">
                         <li>Find the location described in the riddle</li>
-                        <li>Mark the exact spot on the map</li>
+                        <li>Share your current location</li>
                         <li>Submit a photo of the location (optional)</li>
                         <li>Enter the secret code found at the location</li>
                       </ul>
@@ -149,14 +175,14 @@ export default function PuzzlePage() {
                 </Tabs>
               </Card>
 
+              {/* Location Sharing Section */}
+              <Card className="glass-card p-6">
+                <LocationSharing />
+              </Card>
+
               <Card className="glass-card p-6">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <PuzzleMap
-                      selectedLocation={selectedLocation}
-                      onLocationSelect={setSelectedLocation}
-                    />
-
                     <div className="flex gap-4">
                       <Button
                         type="button"
@@ -205,8 +231,8 @@ export default function PuzzlePage() {
                 </Form>
               </Card>
 
-              {/* Puzzle Status Cards */}
-              <PuzzleStatusCards currentPuzzle={CURRENT_PUZZLE} totalPuzzles={TOTAL_PUZZLES} />
+              {/* Dynamic Puzzle Cards */}
+              <DynamicPuzzleCards isLoading={isLoading} />
             </div>
 
             {/* Leaderboard Section */}
