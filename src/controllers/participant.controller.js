@@ -7,6 +7,7 @@ import redis from "ioredis";
 
 const createHunt = asyncHandler(async(req,res)=>{
     const{name, description, puzzles, startTime, endTime ,createdBy,level}= req.body
+    console.log(req.body)
 try {
     console.log("1")
         if([name, description, puzzles, startTime, endTime,level ].some((field)=> field?.trim)===""){
@@ -89,6 +90,8 @@ const getUpcomingEvents= asyncHandler(async(req, res)=>{
 const participate= asyncHandler(async(req,res)=>{
 try {
         const {participant} = req.body
+        console.log(participant)
+        console.log(req.body)
         if(!participant){
             throw new ApiError(400, "Failed to fetch participant")
         }
@@ -100,7 +103,7 @@ try {
         if(hunt.participants.includes(participant)){
             throw new ApiError(400, "User already registered in the Hunt")
         }
-        hunt.participants.push(participant)
+        hunt.participants.push({user:participant})
         await hunt.save()
 
         const huntPuzzles= hunt.puzzles

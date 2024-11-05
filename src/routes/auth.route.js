@@ -2,6 +2,7 @@ import { Router } from "express";
 import passport from "passport";
 import bcrypt from "bcryptjs";
 import User from "../models/user.models.js";
+import { isVerified } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.route("/login").post((req, res, next) => {
         req.logIn(user, (err) => {
             if (err) return next(err);
             console.log("Login successful:", user);
-            return res.status(200).json({ message: "Logged in successfully" });
+            return res.status(200).json({ user,message: "Logged in successfully" });
         });
     })(req, res, next);
 });
@@ -63,7 +64,15 @@ router.route("/signup").post(async (req, res, next) => {
             return res.status(201).json({ message: "User registered and logged in successfully" });
         });
     } catch (error) {
-        res.status(500).json({ message: "Error registering user", error });
+        res.status(500).json({ user,message: "Error registering user", error });
+    }
+});
+
+router.get('/user', isVerified, (req, res) => {
+    if (req.user) {
+        res.json(req.user);
+    } else {
+        res.status(401).json({ message: "Unauthorized" });
     }
 });
 

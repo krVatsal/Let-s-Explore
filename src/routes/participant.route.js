@@ -6,7 +6,7 @@ const router= Router()
 router.route("/liveHunts", isVerified).get(getLiveHunts)
 router.route("/upcomingHunts", isVerified).get(getUpcomingEvents)
 router.route("/createHunt", isVerified).post(createHunt)
-router.route("/participate", isVerified).post(participate)
+router.route("/participate/:huntId", isVerified).post(participate)
 router.route("/yourHunts", isVerified).get(yourHunts)
 router.route("/verifyImage", isVerified).post(isImageCorrect)
 router.route("/submitGuess", isVerified).put(

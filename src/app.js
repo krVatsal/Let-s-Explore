@@ -40,17 +40,21 @@ passport.use(new LocalStrategy({
     try {
         const user = await User.findOne({ email });
         if (!user) {
+            console.log("User not found");
             return done(null, false, { message: 'Incorrect email or password.' });
         }
-        console.log("1")
-        const isMatch = bcrypt.compare(password, user.password);
+
+        // Check password
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            console.log("3")
+            console.log("Password does not match");
             return done(null, false, { message: 'Incorrect email or password.' });
         }
-        console.log("2")
+
+        console.log("Login successful");
         return done(null, user);
     } catch (err) {
+        console.error("Error in authentication:", err);
         return done(err);
     }
 }));
@@ -62,26 +66,45 @@ passport.use(new GoogleStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         let user = await User.findOne({ googleId: profile.id });
+        
         if (!user) {
             user = new User({
                 googleId: profile.id,
-                firstName: profile.name.givenName,
-                lastName: profile.name.familyName,
+                firstName: `${profile.name.givenName}`,
+                lastName: `${profile.name.familyName}`,
                 email: profile.emails[0].value,
             });
             await user.save();
         }
-        return done(null, user);
+
+        // Format user data
+        const userData = {
+            _id: user._id,
+            name: user.firstName,
+            email: user.email,
+        };
+
+        return done(null, userData);
     } catch (err) {
         return done(err);
     }
 }));
 
-passport.serializeUser((user, done) => done(null, user.id));
+
+passport.serializeUser((user, done) => done(null, user._id));
+
 passport.deserializeUser(async (id, done) => {
     try {
         const user = await User.findById(id);
-        done(null, user);
+        if (user) {
+            done(null, {
+                _id: user._id,
+                name: user.firstName,
+                email: user.email,
+            });
+        } else {
+            done(null, null);
+        }
     } catch (err) {
         done(err);
     }

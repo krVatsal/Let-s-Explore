@@ -79,11 +79,6 @@ const huntSchema = new mongoose.Schema({
                         type: String,
                         default: ""
                     },
-                    level: {
-                        type: String,
-                        enum: ['1', '2'], // Specifies hint level
-                        required: true
-                    }
                 }
             ],
             photoReq: {
