@@ -202,7 +202,7 @@ console.log(user);
                     required
                   />
                 ))}
-                <Button
+                {/* <Button
                   type="button"
                   variant="link"
                   onClick={() => {
@@ -212,7 +212,7 @@ console.log(user);
                   }}
                 >
                   Add Another Hint
-                </Button>
+                </Button> */}
               </div>
 
               <div className="space-y-2">
