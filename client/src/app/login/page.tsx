@@ -35,7 +35,7 @@ export default function LoginPage() {
     event.preventDefault()
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5217/auth/login', {
+      const response = await fetch(`http://localhost:5217/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -54,6 +54,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519669417670-68775a50919c?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] opacity-20 bg-cover bg-center" />
@@ -66,16 +67,16 @@ export default function LoginPage() {
             <p className="text-gray-300">Continue your adventure</p>
           </div>
 
+<a href="http://localhost:5217/auth/google">
           <Button
             variant="outline"
-            onClick={() => window.location.href = 'http://localhost:5217/auth/google'}
             disabled={isLoading}
             className="w-full group border border-emerald-600 text-emerald-600 hover:bg-emerald-700"
           >
             <Chrome className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" />
             Continue with Google
           </Button>
-          
+          </a>
           <div className="relative">
             <Separator />
             <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 bg-gray-800 text-xs text-gray-500">

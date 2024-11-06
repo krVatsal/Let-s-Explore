@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import { Space_Grotesk } from 'next/font/google';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/app/context/AuthContext';
-
+import 'leaflet/dist/leaflet.css';
+import { HuntProvider } from './context/huntContext';
 const spaceGrotesk = Space_Grotesk({ 
   weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
@@ -23,10 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} font-sans`}>
+      <HuntProvider>
+
       <AuthProvider> 
         {children}
         <Toaster />
         </AuthProvider>
+      </HuntProvider>
        
       </body>
     </html>

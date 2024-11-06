@@ -1,10 +1,27 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  eslint: {
-    ignoreDuringBuilds: true,
+  reactStrictMode: false,
+  async rewrites() {
+    return [
+      
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://localhost:5217/:path*',
+      },
+      {
+        source: '/auth/:path*',
+        destination: 'http://localhost:5217/:path*',
+      },
+      {
+        source: '/:path*',
+        destination: 'https://play.google.com/:path*',
+      },
+    ]
   },
-  images: { unoptimized: true },
-};
-
-module.exports = nextConfig;
+    experimental: {
+      serverActions: true,
+      serverComponentsExternalPackages:["mongoose"],
+    }
+  }
+  
+  export default nextConfig;

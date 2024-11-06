@@ -14,64 +14,65 @@ export function LocationSharing() {
   const { toast } = useToast();
 
   const handleGetLocation = () => {
-    // setIsLoading(true);
-    // if (!navigator.geolocation) {
-    //   toast({
-    //     title: "Error",
-    //     description: "Geolocation is not supported by your browser",
-    //     variant: "destructive",
-    //   });
-    //   setIsLoading(false);
+    setIsLoading(true);
+
+    if (!navigator.geolocation) {
+      toast({
+        title: "Error",
+        description: "Geolocation is not supported by your browser",
+        variant: "destructive",
+      });
+      setIsLoading(false);
       return;
     }
 
-//     navigator.geolocation.getCurrentPosition(
-//       (position) => {
-//         setLocation(position.coords);
-//         setIsLoading(false);
-//         toast({
-//           title: "Location Retrieved",
-//           description: "Your current location has been successfully captured.",
-//         });
-//       },
-//       (error) => {
-//         toast({
-//           title: "Error",
-//           description: getGeolocationErrorMessage(error),
-//           variant: "destructive",
-//         });
-//         setIsLoading(false);
-//       },
-//       { enableHighAccuracy: true }
-//     );
-//   };
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation(position.coords);
+        setIsLoading(false);
+        toast({
+          title: "Location Retrieved",
+          description: "Your current location has been successfully captured.",
+        });
+      },
+      (error) => {
+        toast({
+          title: "Error",
+          description: getGeolocationErrorMessage(error),
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
 
-//   const getGeolocationErrorMessage = (error: GeolocationPositionError) => {
-//     switch (error.code) {
-//       case error.PERMISSION_DENIED:
-//         return "Location permission was denied. Please enable location access.";
-//       case error.POSITION_UNAVAILABLE:
-//         return "Location information is unavailable.";
-//       case error.TIMEOUT:
-//         return "Location request timed out.";
-//       default:
-//         return "An unknown error occurred.";
-//     }
-//   };
+  const getGeolocationErrorMessage = (error: GeolocationPositionError) => {
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        return "Location permission was denied. Please enable location access.";
+      case error.POSITION_UNAVAILABLE:
+        return "Location information is unavailable.";
+      case error.TIMEOUT:
+        return "Location request timed out.";
+      default:
+        return "An unknown error occurred.";
+    }
+  };
 
-//   const handleCopyLocation = () => {
-//     if (!location) return;
-    
-//     const locationString = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
-//     navigator.clipboard.writeText(locationString);
-//     setIsCopied(true);
-//     setTimeout(() => setIsCopied(false), 2000);
-    
-//     toast({
-//       title: "Copied!",
-//       description: "Location coordinates copied to clipboard",
-//     });
-//   };
+  const handleCopyLocation = () => {
+    if (!location) return;
+
+    const locationString = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+    navigator.clipboard.writeText(locationString);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+
+    toast({
+      title: "Copied!",
+      description: "Location coordinates copied to clipboard",
+    });
+  };
 
   return (
     <div className="space-y-4">

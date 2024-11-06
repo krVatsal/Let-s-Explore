@@ -9,32 +9,7 @@ type PuzzleCardProps = {
   isLoading: boolean;
 };
 
-const MOCK_PUZZLES = [
-  {
-    id: 1,
-    title: "The Ancient Scroll",
-    description: "Find the hidden scroll in the library's oldest section.",
-    difficulty: "easy",
-    status: "completed",
-    timeLimit: "30 minutes",
-  },
-  {
-    id: 2,
-    title: "Digital Gateway",
-    description: "Decode the binary message in the computer lab.",
-    difficulty: "medium",
-    status: "active",
-    timeLimit: "45 minutes",
-  },
-  {
-    id: 3,
-    title: "Garden Riddle",
-    description: "Solve the botanical puzzle in the campus garden.",
-    difficulty: "hard",
-    status: "locked",
-    timeLimit: "60 minutes",
-  },
-];
+
 
 export function DynamicPuzzleCards({ isLoading }: PuzzleCardProps) {
   if (isLoading) {
