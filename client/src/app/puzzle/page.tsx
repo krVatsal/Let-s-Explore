@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useState, useEffect,useContext } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,14 +15,12 @@ import { PuzzleProgress } from "@/components/puzzle/PuzzleProgress";
 import { PuzzleHints } from "@/components/puzzle/PuzzleHints";
 import { LocationSharing } from "@/components/puzzle/LocationSharing";
 import { useHunt } from "../context/huntContext";
+import { interval } from "date-fns";
+import { AuthContext } from "../context/AuthContext";
 const formSchema = z.object({
-  answer: z.string().min(1, "Answer is required"),
-  location: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }).optional(),
+  location: z.tuple([z.number(), z.number()]),
+  photo: z.any().optional(),
 });
-
 type LeaderboardEntry = {
   rank: number;
   name: string;
@@ -44,15 +42,28 @@ export default function PuzzlePage() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [huntStartTime, setHuntStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [hintsOpened, setHintsOpened] = useState(0);
+  const [submissionIntervals, setSubmissionIntervals] = useState<number[]>([]);
+  const [currentPuzzle, setCurrentPuzzle] = useState(0);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [isLeaderboardUpdated, setIsLeaderboardUpdated] = useState(false); 
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error("AuthContext is not available.");
+  }
+  
+  const { user } = authContext;
+  const { participationData } = useHunt();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      answer: "",
-    },
+      location: [0, 0],
+    }
   });
 
-const {participationData}= useHunt()
 console.log(participationData)
 
 const endTime = participationData.data.puzzles.endTime
@@ -79,64 +90,104 @@ useEffect(() => {
 
   return () => clearInterval(interval); // Cleanup on component unmount
 }, [endTime]);
-  const handlePhotoUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setPhoto(file);
-      toast({
-        title: "Photo Selected",
-        description: `Selected file: ${file.name}`,
-      });
-    }
-  };
-  const [currentPuzzle, setCurrentPuzzle] = useState(0); // Set initial puzzle index
-  
-  const handleNextPuzzle = () => {
-    if (currentPuzzle < participationData.data.puzzles.length - 1) {
-      setCurrentPuzzle(currentPuzzle + 1); // Update the current puzzle
-    }
-  };
-  const [hintsOpened, setHintsOpened] = useState(0);
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-  
-    try {
-      const formData = new FormData();
-      formData.append("answer", values.answer);
-  
-      if (photo) {
-        formData.append("photo", photo);
-      }
-      formData.append("hintsOpened", hintsOpened)
-  
-      const response = await fetch("http://localhost:5217/api/v1/submitGuess", {
-        method: "POST",
-        body: formData,
-      });
-  
-      if (!response.ok) {
-        throw new Error("Failed to submit answer. Please try again.");
-      }
-      handleNextPuzzle()
-  
-      const result = await response.json();
-      toast({
-        title: "Answer Submitted!",
-        description: result.message || "Your answer is being verified.",
-      });
-  
-      form.reset();
-      setPhoto(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit answer. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (file) {
+    setPhoto(file);
+    toast({
+      title: "Photo Selected",
+      description: `Selected file: ${file.name}`,
+    });
   }
+};
+
+async function fetchLeaderboard() {
+  try {
+    const response = await fetch(`http://localhost:5217/api/v1/leaderboard/${participationData.data.huntId}`,{
+      method: "GET",
+      body: participationData.data.huntId
+    });
+    if (!response.ok) throw new Error("Failed to fetch leaderboard");
+    const data = await response.json();
+    console.log(data)
+    setLeaderboard(data);
+    setIsLeaderboardUpdated(false); // Reset flag after leaderboard is updated
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function onSubmit(values: z.infer<typeof formSchema>) {
+  setIsSubmitting(true);
+  
+  if (!user?._id || !participationData?.data?.huntId) {
+    toast({
+      title: "Error",
+      description: "Missing user or hunt information",
+      variant: "destructive",
+    });
+    setIsSubmitting(false);
+    return;
+  }
+
+  const currentTime = Date.now();
+  const timeTaken = huntStartTime ? Math.floor((currentTime - huntStartTime) / 1000) : 0;
+
+  try {
+    const formData = new FormData();
+    
+    // Add all required fields
+    formData.append("huntId", participationData.data.huntId);
+    formData.append("userId", user._id);
+    formData.append("puzzleId", participationData.data.puzzles.puzzles[currentPuzzle]._id);
+    formData.append("guessedLocation", JSON.stringify({ coordinates: values.location }));
+    formData.append("timeTaken", timeTaken.toString());
+    formData.append("hintsOpened", hintsOpened.toString());
+
+    // Add photo if exists
+    if (participationData.data.puzzles.puzzles[currentPuzzle].photoReq && photo) {
+      formData.append("image", photo);
+    }
+    const response = await fetch("http://localhost:5217/api/v1/submitGuess", {
+      method: "PUT",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to submit answer");
+    }
+
+    const result = await response.json();
+    console.log(result)
+    
+    toast({
+      title: "Success!",
+      description: result.message || "Answer submitted successfully",
+    });
+
+    // Move to next puzzle if submission was successful
+    if (currentPuzzle < participationData.data.puzzles.puzzles.length-1) {
+      setCurrentPuzzle(prev => prev + 1);
+    }
+    setIsLeaderboardUpdated(true);
+    // Reset form and photo
+    form.reset();
+    setPhoto(null);
+    setHintsOpened(0);
+
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: error.message || "Failed to submit answer",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+}
+
+  
   
 
   if (error) {
@@ -160,7 +211,11 @@ useEffect(() => {
   }
 
 
-
+  useEffect(() => {
+    if (isLeaderboardUpdated) {
+      fetchLeaderboard(); // Fetch leaderboard after a successful submission
+    }
+  }, [isLeaderboardUpdated]);
   return (
     <div className="min-h-screen bg-background">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] mix-blend-overlay opacity-5 bg-cover bg-center" />
@@ -228,40 +283,42 @@ useEffect(() => {
                 <LocationSharing />
               </Card>
               <Card className="glass-card p-6">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="flex gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 border-emerald-500/20"
-                        onClick={() => document.getElementById("photo-input").click()}
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Photo
-                      </Button>
-                      <input
-                        type="file"
-                        id="photo-input"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        style={{ display: "none" }}
-                      />
-                    </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {participationData.data.puzzles.puzzles[currentPuzzle].photoReq && (
+  <div className="flex gap-4">
+    <Button
+      type="button"
+      variant="outline"
+      className="flex-1 border-emerald-500/20"
+      onClick={() => document.getElementById("photo-input")?.click()}
+    >
+      <Upload className="w-4 h-4 mr-2" />
+      Upload Photo
+    </Button>
+    <input
+      type="file"
+      id="photo-input"
+      accept="image/*"
+      onChange={handlePhotoUpload}
+      style={{ display: "none" }}
+    />
+  </div>
+)}
 
-                    <Button
-                      type="submit"
-                      className={cn(
-                        "w-full bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500",
-                        isSubmitting && "animate-pulse"
-                      )}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? "Verifying..." : "Submit Answer"}
-                    </Button>
-                  </form>
-                </Form>
-              </Card>
+          <Button
+            type="submit"
+            className={cn(
+              "w-full bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500",
+              isSubmitting && "animate-pulse"
+            )}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Verifying..." : "Submit Answer"}
+          </Button>
+        </form>
+      </Form>
+    </Card>
 
             </div>
 
@@ -273,18 +330,23 @@ useEffect(() => {
                     <Trophy className="w-5 h-5 text-emerald-500" />
                     Leaderboard
                   </h2>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    toast({
-                      title: "Leaderboard Updated",
-                      description: "Latest scores loaded!",
-                    });
-                  }}>
-                    Refresh
-                  </Button>
+                  <Button 
+  variant="ghost" 
+  size="sm" 
+  onClick={async () => {
+    await fetchLeaderboard(); 
+    toast({
+      title: "Leaderboard Updated",
+      description: "Latest scores loaded!",
+    });
+  }}
+>
+  Refresh
+</Button>
                 </div>
                 
                 <div className="space-y-2">
-                  {MOCK_LEADERBOARD.map((entry) => (
+                  {leaderboard.map((entry) => (
                     <div
                       key={entry.rank}
                       className={cn(

@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import axios from 'axios';
 import { AuthContext } from '@/app/context/AuthContext';
 import dynamic from 'next/dynamic';
-
+import { useToast } from "@/hooks/use-toast";
 type Puzzle = {
   puzzleText: string;
   hints: string[];
@@ -29,7 +29,7 @@ export default function CreateEventForm() {
     location: null,
     photoReq: false,
   }]);
-
+const toast = useToast()
   const Map = useMemo(() => dynamic(
     () => import('./Map'),
     { 
@@ -86,6 +86,12 @@ export default function CreateEventForm() {
     try {
       const response = await axios.post('http://localhost:5217/api/v1/createHunt', huntData);
       console.log("Hunt created successfully", response.data);
+      if(response.ok){
+        toast({
+          title: "New Hunt created",
+          description: "Refresh to add it to the page",
+        });
+      }
     } catch (error) {
       console.error("Error creating hunt:", error);
       alert("There was an error creating the hunt. Please try again.");
