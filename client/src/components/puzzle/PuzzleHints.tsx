@@ -5,32 +5,34 @@ import { Button } from "@/components/ui/button";
 import { Lock, Unlock, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
 
-const HINTS = [
-  {
-    id: 1,
-    text: "Look for a place where modern technology meets traditional learning.",
-    cost: 25,
-  },
-  {
-    id: 2,
-    text: "Check near the central computing facility.",
-    cost: 50,
-  }
-];
+// Define the shape of the Hint object being passed as props
+type Hint = {
+  hint: string;
+  _id: string;
+};
 
-export function PuzzleHints({ onHintsChange }: { onHintsChange: (hintsOpened: number) => void }) {
-  const [unlockedHints, setUnlockedHints] = useState<number[]>([]);
+export function PuzzleHints({
+  onHintsChange,
+  hintsData,
+}: {
+  onHintsChange: (hintsOpened: number) => void;
+  hintsData: Hint[];
+}) {
+  const [unlockedHints, setUnlockedHints] = useState<string[]>([]); // Use _id to track unlocked hints
   const { toast } = useToast();
 
-  const unlockHint = (hintId: number, cost: number) => {
+  // Hardcoded cost values for the hints
+  const hintCosts = [10, 20];
+
+  const unlockHint = (hintId: string, cost: number) => {
     if (unlockedHints.includes(hintId)) return;
 
     toast({
       title: `Hint ${hintId} Unlocked!`,
       description: `-${cost} points`,
     });
+
     const updatedHints = [...unlockedHints, hintId];
     setUnlockedHints(updatedHints);
 
@@ -40,13 +42,15 @@ export function PuzzleHints({ onHintsChange }: { onHintsChange: (hintsOpened: nu
 
   return (
     <div className="space-y-4">
-      {HINTS.map((hint, index) => {
-        const isUnlocked = unlockedHints.includes(hint.id);
-        const isPreviousUnlocked = index === 0 || unlockedHints.includes(HINTS[index - 1].id);
+      {hintsData.map((hint, index) => {
+        const hintId = hint._id; // Use _id as the unique identifier
+        const cost = hintCosts[index]; // Get the cost based on the hint position
+        const isUnlocked = unlockedHints.includes(hintId);
+        const isPreviousUnlocked = index === 0 || unlockedHints.includes(hintsData[index - 1]._id);
 
         return (
           <div
-            key={hint.id}
+            key={hintId}
             className={cn(
               "p-4 rounded-lg border transition-all duration-300",
               isUnlocked
@@ -63,12 +67,12 @@ export function PuzzleHints({ onHintsChange }: { onHintsChange: (hintsOpened: nu
                   <Lock className="w-5 h-5 text-gray-400" />
                 )}
                 <div>
-                  <h3 className="font-medium mb-1">Hint {hint.id}</h3>
+                  <h3 className="font-medium mb-1">Hint {index + 1}</h3>
                   {isUnlocked ? (
-                    <p className="text-sm text-gray-400">{hint.text}</p>
+                    <p className="text-sm text-gray-400">{hint.hint}</p>
                   ) : (
                     <p className="text-sm text-gray-500">
-                      Unlock this hint for {hint.cost} points
+                      Unlock this hint for {cost} points
                     </p>
                   )}
                 </div>
@@ -78,8 +82,8 @@ export function PuzzleHints({ onHintsChange }: { onHintsChange: (hintsOpened: nu
                   variant="outline"
                   size="sm"
                   className="border-emerald-500/20"
-                  onClick={() => unlockHint(hint.id, hint.cost)}
-                  disabled={!isPreviousUnlocked}
+                  onClick={() => unlockHint(hintId, cost)}
+                  disabled={!isPreviousUnlocked} // Disable button if previous hint isn't unlocked
                 >
                   <HelpCircle className="w-4 h-4 mr-2" />
                   Unlock

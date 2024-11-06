@@ -7,7 +7,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useContext } from "react";
 import { AuthContext } from "@/app/context/AuthContext";
-
+import { useHunt } from "@/app/context/huntContext";
 type Event = {
   id: string; // Assuming _id from backend as string
   name: string; // title -> name
@@ -32,6 +32,7 @@ type EventCardProps = {
 
 export function EventCard({ event }: EventCardProps) {
   const authContext = useContext(AuthContext);
+  const { setParticipationData } = useHunt();
 
 if (!authContext) {
   throw new Error("AuthContext is not available.");
@@ -51,6 +52,7 @@ const { user, setUser } = authContext;
       });
       const joinData = await response.json();
       console.log("Joined event successfully:", joinData);
+      setParticipationData(joinData);
       // Optionally, update the state or navigate based on the response
     } catch (error) {
       console.error("Failed to join event:", error);
@@ -79,7 +81,7 @@ const { user, setUser } = authContext;
       <div className="p-6 space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between items-start gap-4">
-            <h3 className="text-xl font-bold">{event.name}</h3>
+            <h3 className="text-xl font-bold">{event.title}</h3>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={`${getDifficultyColor(event.level)} border`}>
                 {event.level}

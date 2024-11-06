@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PuzzleProgress } from "@/components/puzzle/PuzzleProgress";
 import { PuzzleHints } from "@/components/puzzle/PuzzleHints";
 import { LocationSharing } from "@/components/puzzle/LocationSharing";
-
+import { useHunt } from "../context/huntContext";
 const formSchema = z.object({
   answer: z.string().min(1, "Answer is required"),
   location: z.object({
@@ -37,8 +37,6 @@ const MOCK_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 3, name: "Raj Patel", score: 2100, solved: 4, time: "2h 10m" },
 ];
 
-const TOTAL_PUZZLES = 10;
-const CURRENT_PUZZLE = 4;
 
 export default function PuzzlePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,21 +52,33 @@ export default function PuzzlePage() {
     },
   });
 
-  useEffect(() => {
-    const loadPuzzleData = async () => {
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsLoading(false);
-      } catch (err) {
-        setError("Failed to load puzzle data. Please try again.");
-        setIsLoading(false);
-      }
-    };
+const {participationData}= useHunt()
+console.log(participationData)
 
-    loadPuzzleData();
-  }, []);
+const endTime = participationData.data.puzzles.endTime
+function calculateTimeRemaining(endTime) {
+  const end = new Date(endTime).getTime();
+  const now = new Date().getTime();
+  const timeLeft = end - now;
 
+  if (timeLeft <= 0) {
+    return "Time's up!";
+  }
+
+  const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
+  const seconds = Math.floor((timeLeft / 1000) % 60);
+
+  return `${hours}h ${minutes}m ${seconds}s remaining`;
+}
+const [timeRemaining, setTimeRemaining] = useState(calculateTimeRemaining(endTime));
+useEffect(() => {
+  const interval = setInterval(() => {
+    setTimeRemaining(calculateTimeRemaining(endTime));
+  }, 1000);
+
+  return () => clearInterval(interval); // Cleanup on component unmount
+}, [endTime]);
   const handlePhotoUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -77,6 +87,13 @@ export default function PuzzlePage() {
         title: "Photo Selected",
         description: `Selected file: ${file.name}`,
       });
+    }
+  };
+  const [currentPuzzle, setCurrentPuzzle] = useState(0); // Set initial puzzle index
+  
+  const handleNextPuzzle = () => {
+    if (currentPuzzle < participationData.data.puzzles.length - 1) {
+      setCurrentPuzzle(currentPuzzle + 1); // Update the current puzzle
     }
   };
   const [hintsOpened, setHintsOpened] = useState(0);
@@ -100,6 +117,7 @@ export default function PuzzlePage() {
       if (!response.ok) {
         throw new Error("Failed to submit answer. Please try again.");
       }
+      handleNextPuzzle()
   
       const result = await response.json();
       toast({
@@ -141,6 +159,8 @@ export default function PuzzlePage() {
     );
   }
 
+
+
   return (
     <div className="min-h-screen bg-background">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] mix-blend-overlay opacity-5 bg-cover bg-center" />
@@ -150,25 +170,25 @@ export default function PuzzlePage() {
           {/* Header Section */}
           <div className="text-center space-y-4">
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-600 text-transparent bg-clip-text">
-              The Hidden Library
+              {participationData.data.puzzles.name}
             </h1>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              Decode the ancient riddle and find the secret entrance to MNNIT's mystical library.
+              {participationData.data.puzzles.description}
             </p>
             <div className="flex justify-center gap-4">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-emerald-500" />
-                <span>30 minutes remaining</span>
+                <span>{timeRemaining}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-emerald-500" />
-                <span>42 hunters active</span>
+                <span>{participationData.data.participantsCount} hunters active</span>
               </div>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <PuzzleProgress currentPuzzle={CURRENT_PUZZLE} totalPuzzles={TOTAL_PUZZLES} />
+          <PuzzleProgress currentPuzzle={currentPuzzle+1} totalPuzzles={participationData.data.puzzles.puzzles.length} />
 
           {/* Main Content */}
           <div className="grid md:grid-cols-3 gap-8">
@@ -183,10 +203,7 @@ export default function PuzzlePage() {
                   <TabsContent value="riddle" className="space-y-4">
                     <div className="prose prose-emerald dark:prose-invert max-w-none">
                       <p className="text-lg font-medium text-center italic">
-                        "Where knowledge flows like a digital stream,<br/>
-                        Ancient wisdom meets modern dream.<br/>
-                        Between pillars three, a secret lies,<br/>
-                        Where students rest their weary eyes."
+                        {participationData.data.puzzles.puzzles[currentPuzzle].puzzleText}
                       </p>
                     </div>
                     <div className="bg-emerald-500/10 p-4 rounded-lg">
@@ -194,12 +211,14 @@ export default function PuzzlePage() {
                       <ul className="list-disc list-inside space-y-2 text-sm">
                         <li>Find the location described in the riddle</li>
                         <li>Share your current location</li>
-                        <li>Submit a photo of the location (optional)</li>
+                        <li>Submit a selfie of yours at the location (optional)</li>
+                        <li>50 points will be awarded for each correct submission</li>
+                        <li>30 points will be awarded for each correct image submission</li>
                       </ul>
                     </div>
                   </TabsContent>
                   <TabsContent value="hints">
-                  <PuzzleHints onHintsChange={setHintsOpened} />
+                  <PuzzleHints onHintsChange={setHintsOpened} hintsData={participationData.data.puzzles.puzzles[currentPuzzle].hints} />
                   </TabsContent>
                 </Tabs>
               </Card>
@@ -229,23 +248,6 @@ export default function PuzzlePage() {
                         style={{ display: "none" }}
                       />
                     </div>
-                      
-                      {/* <FormField
-                        control={form.control}
-                        name="answer"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input
-                                placeholder="Enter secret code..."
-                                className="bg-gray-900/50 border-emerald-500/20"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      /> */}
 
                     <Button
                       type="submit"
