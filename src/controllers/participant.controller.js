@@ -106,14 +106,10 @@ try {
         hunt.participants.push({user:participant})
         await hunt.save()
 
-        const huntPuzzles= hunt.puzzles
-        if(!huntPuzzles){
-            throw new ApiError(400, "No puzzles in the hunt")
-        }
      
         
         return res.status(200)
-        .json(new ApiResponse(200,{huntId:hunt._id, participantsCount: hunt.participants.length, puzzles: huntPuzzles}, "User participated sucessfully in the hunt"))
+        .json(new ApiResponse(200,{huntId:hunt._id, participantsCount: hunt.participants.length, puzzles: hunt}, "User participated sucessfully in the hunt"))
 } catch (error) {
     throw new Error(error)
 }
@@ -200,7 +196,7 @@ const submitGuess = asyncHandler(async (req, res) => {
         await hunt.save();
 
         // Clear leaderboard cache in Redis
-        await redis.del(`leaderboard_${huntId}`);
+        // await redis.del(`leaderboard_${huntId}`);
         return res.status(200).json(new ApiResponse('Guess submitted successfully', { imageUrl, isCorrect, pointsEarned: scoreAdjustment }));
     } catch (error) {
         throw new Error(error);
@@ -263,35 +259,37 @@ const getParticipant= asyncHandler(async(req,res)=>{
 }
 })
 
-const isImageCorrect= asyncHandler(async(req,res)=>{
-    const {isCorrect, huntId,userId}= req.body
-    if(!isCorrect || !huntId|| !userId){
-        throw new ApiError(400, "All field is required")
+const isImageCorrect = asyncHandler(async (req, res) => {
+    const { isCorrect, huntId, userId } = req.body;
+    if (!isCorrect || !huntId || !userId) {
+        throw new ApiError(400, "All fields are required");
     }
-try {
-        let scoreAdj=0
-        if(isCorrect==true){
-            scoreAdj+= 30
+    try {
+        let scoreAdj = 0;
+        if (isCorrect === true) {
+            scoreAdj += 30;
+        } else {
+            throw new ApiError(400, "Incorrect image uploaded");
         }
-        else {
-            throw new ApiError(400, "Wrong image uploaded")
+
+        const hunt = await HuntModel.findById(huntId);
+        if (!hunt) {
+            throw new ApiError(400, "Failed to fetch hunt");
         }
-        const hunt = await HuntModel.findById(huntId)
-        if(!hunt){
-            throw new ApiError(400, "Failed to fetch hunt")
+        const participant = hunt.participants.find(p => p.user.toString() === userId);
+        if (!participant) {
+            throw new ApiError(400, "Failed to fetch participant");
         }
-        const User = await hunt.findById(userId)
-        if(!User){
-            throw new ApiError(400, "Failed to fetch user")
-        }
-        User.points += scoreAdj
-        await HuntModel.save()
-        return res.status(200)
-        .json(new ApiResponse(200, User.points, "Points updates sucessfully"))
-} catch (error) {
-     throw new Error(error)
-}
-})
+
+        participant.points = (participant.points || 0) + scoreAdj;
+        await hunt.save();
+
+        return res.status(200).json(new ApiResponse(200, participant.points, "Points updated successfully"));
+    } catch (error) {
+        throw new Error(error);
+    }
+});
+
 
 
 

@@ -9,7 +9,7 @@ const participantSchema = new mongoose.Schema({
     guesses: [
         {
             guessedLocation: {
-                coordinates: { type: [Number], required: true } 
+                coordinates: {type:[String], required: true }
             },
             imageUrl: {
                 type: String,
@@ -27,7 +27,7 @@ const participantSchema = new mongoose.Schema({
     ],
     points: {
         type: Number,
-        default: 0 
+        default: 0
     },
 });
 
@@ -71,7 +71,16 @@ const huntSchema = new mongoose.Schema({
                 required: true
             },
             location: {
-                coordinates: { type: [Number], required: true } // [longitude, latitude]
+                coordinates: {
+                    type: [Number],
+                    required: true,
+                    validate: {
+                        validator: function (coords) {
+                            return coords.length === 2;
+                        },
+                        message: "Coordinates should include [longitude, latitude]"
+                    }
+                }
             },
             hints: [
                 {
@@ -100,7 +109,7 @@ huntSchema.path('puzzles').validate(function (puzzles) {
     return puzzles.length <= (levelPuzzleLimits[this.level] || 0);
 }, props => `Number of puzzles exceeds the limit for level ${props.instance.level}`);
 
-// Pre-save middleware to set points based on difficulty level
+// Pre-save middleware to set points based on difficulty level only for new participants
 huntSchema.pre('save', function (next) {
     const levelPointsMap = {
         easy: 250,
@@ -108,11 +117,15 @@ huntSchema.pre('save', function (next) {
         hard: 500
     };
 
-    // If participants are newly added, initialize their points based on hunt level
-    this.participants = this.participants.map(participant => ({
-        ...participant,
-        points: levelPointsMap[this.level] || 0
-    }));
+    this.participants = this.participants.map(participant => {
+        if (participant.points === 0) {
+            return {
+                ...participant,
+                points: levelPointsMap[this.level] || 0
+            };
+        }
+        return participant;
+    });
 
     next();
 });
