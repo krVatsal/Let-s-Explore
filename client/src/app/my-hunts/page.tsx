@@ -1,55 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Users, MapPin, Image as ImageIcon, CheckCircle2, XCircle, ChevronRight, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Trophy, Users, CheckCircle2 } from "lucide-react";
 import { HuntCard } from "@/components/hunts/HuntCard";
 import { ParticipantList } from "@/components/hunts/ParticipantList";
 import { ResponseView } from "@/components/hunts/ResponseView";
 import { HuntLeaderboard } from "@/components/hunts/HuntLeaderboard";
-
-// Mock data for development
-const MOCK_HUNTS = [
-  {
-    id: 1,
-    title: "Library Quest",
-    participants: 42,
-    status: "active",
-    startDate: "2024-03-20T10:00:00",
-    endDate: "2024-03-20T12:00:00",
-    totalPuzzles: 5,
-    completedPuzzles: 3,
-  },
-  {
-    id: 2,
-    title: "Tech Trail",
-    participants: 28,
-    status: "completed",
-    startDate: "2024-03-19T14:00:00",
-    endDate: "2024-03-19T16:00:00",
-    totalPuzzles: 4,
-    completedPuzzles: 4,
-  },
-];
+import { AuthContext } from '@/app/context/AuthContext';
 
 export default function MyHuntsPage() {
-  const [selectedHunt, setSelectedHunt] = useState<number | null>(null);
-  const [selectedParticipant, setSelectedParticipant] = useState<number | null>(null);
+  const [hunts, setHunts] = useState([]);
+  const [selectedHunt, setSelectedHunt] = useState(null);
+  const [selectedParticipant, setSelectedParticipant] = useState(null);
   const { toast } = useToast();
 
-  const handleResponseApproval = async (responseId: number, approved: boolean) => {
+  // Fetch logged-in user data
+  const authContext = useContext(AuthContext);
+  const { user } = authContext;
+
+
+  // Fetch hunts data from the server using yourHunts endpoint
+  useEffect(() => {
+    async function fetchHunts() {
+      if (!user || !user._id) {
+        toast({
+          title: "Error",
+          description: "User data not available.",
+          variant: "destructive",
+        });
+        return;
+      }
+  
+      try {
+        // Dynamically inject user._id into the URL
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/yourHunts/${user._id}`);
+        console.log(response);
+        if (!response.ok) {
+          throw new Error("Failed to fetch hunts");
+        }
+  
+        const data = await response.json();
+        console.log(data.data);
+  
+        if (data.statusCode === 200) {
+          setHunts(data.data);
+        } else {
+          toast({
+            title: "No Hunts Found",
+            description: data.message || "No hunts were found for this user.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "An error occurred while fetching hunts.",
+          variant: "destructive",
+        });
+        console.error("Error fetching hunts:", error);
+      }
+    }
+  
+    fetchHunts();
+  }, [user]); 
+  const handleResponseApproval = async (responseId, approved) => {
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       
       toast({
         title: approved ? "Response Approved" : "Response Rejected",
-        description: `Response has been ${approved ? "approved" : "rejected"} successfully.`,
+        description:`Response has been ${approved ? "approved" : "rejected"} successfully`,
       });
     } catch (error) {
       toast({
@@ -80,7 +104,7 @@ export default function MyHuntsPage() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
-              {MOCK_HUNTS.map((hunt) => (
+              {hunts.map((hunt) => (
                 <HuntCard
                   key={hunt.id}
                   hunt={hunt}
@@ -111,7 +135,7 @@ export default function MyHuntsPage() {
               ← Back to Hunts
             </Button>
             <h1 className="text-3xl font-bold">
-              {MOCK_HUNTS.find(h => h.id === selectedHunt)?.title}
+              {hunts.find(h => h.id === selectedHunt)?.title}
             </h1>
           </div>
 
