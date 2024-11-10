@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { Calendar, Clock, Lightbulb, PlusCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 type Puzzle = {
   puzzleText: string;
   hints: string[];
-  location: { coordinates: [number, number] } | null;
+  location: { 
+    coordinates: [number, number];
+    popupText?: string;
+  } | null;
   photoReq: boolean;
 };
 
@@ -54,6 +57,157 @@ const toast = useToast()
     }
   }, [user]);
 
+  const customLocations = [
+    {
+      coordinates: [25.494249, 81.866397],
+      popupText: "Bridge Boys Hostel",
+  },
+  {
+      coordinates: [25.492735, 81.865756],
+      popupText: "Boys Gym",
+  },
+  {
+      coordinates: [25.492309, 81.866085],
+      popupText: "Basketball MP Hall",
+  },
+  {
+      coordinates: [25.494251, 81.866399],
+      popupText: "Roller Skating Ring",
+  },
+  {
+      coordinates: [25.491584, 81.866126],
+      popupText: "MP Hall",
+  },
+  {
+      coordinates: [25.491521, 81.866387],
+      popupText: "Saraswati Gate",
+  },
+  {
+      coordinates: [25.491827, 81.865046],
+      popupText: "Hanuman Mandir",
+  },
+  {
+      coordinates: [25.491138, 81.864701],
+      popupText: "MNNIT Electricity Hub",
+  },
+  {
+      coordinates: [25.490842, 81.864305],
+      popupText: "School of Management Studies",
+  },
+  {
+      coordinates: [25.491099, 81.864312],
+      popupText: "CSED",
+  },
+  {
+      coordinates: [25.490871, 81.863708],
+      popupText: "PG Hostel Girls",
+  },
+  {
+      coordinates: [25.492046, 81.862091],
+      popupText: "Design Center",
+  },
+  {
+      coordinates: [25.492180, 81.862964],
+      popupText: "Center of Interdisciplinary Research",
+  },
+  {
+      coordinates: [25.492327, 81.862361],
+      popupText: "Seminar Hall",
+  },
+  {
+      coordinates: [25.492362, 81.862934],
+      popupText: "Dean Academics",
+  },
+    {
+        coordinates: [25.49305, 81.866806],
+        popupText: "Railway line and boys hostel underpass",
+    },
+    {
+        coordinates: [25.495583, 81.867361],
+        popupText: "Mess staff",
+    },
+    {
+        coordinates: [25.494917, 81.867667],
+        popupText: "SAC boys",
+    },
+    {
+        coordinates: [25.494833, 81.867444],
+        popupText: "Canteen Raj, Pillai",
+    },
+    {
+        coordinates: [25.494583, 81.868806],
+        popupText: "Tirath Raj Canteen",
+    },
+    {
+        coordinates: [25.493694, 81.867611],
+        popupText: "Patel Hostel",
+    },
+    {
+        coordinates: [25.494222, 81.868139],
+        popupText: "Tilak Hostel",
+    },
+    {
+        coordinates: [25.495278, 81.868889],
+        popupText: "Malviya Hostel",
+    },
+    {
+        coordinates: [25.495667, 81.868139],
+        popupText: "Tandon Hostel",
+    },
+    {
+        coordinates: [25.496111, 81.868972],
+        popupText: "NBH",
+    },
+    {
+        coordinates: [25.493611, 81.86825],
+        popupText: "Patel Hostel Gate",
+    },
+    {
+        coordinates: [25.496389, 81.868139],
+        popupText: "NBH Hostel Gate",
+    },
+    {
+        coordinates: [25.494889, 81.868083],
+        popupText: "Mess Common",
+    },
+    // Newly Added Locations
+    {
+        coordinates: [25.492745, 81.862819],
+        popupText: "Svbh Chauraha",
+    },
+    {
+        coordinates: [25.492767, 81.861182],
+        popupText: "Ganga Gate",
+    },
+    {
+        coordinates: [25.493550, 81.861855],
+        popupText: "Admin Back Garden",
+    },
+    {
+        coordinates: [25.494357, 81.861607],
+        popupText: "Yamuna Gate",
+    },
+    {
+        coordinates: [25.494548, 81.862384],
+        popupText: "Yamuna Cafe",
+    },
+    {
+        coordinates: [25.4942713, 81.8626992],
+        popupText: "Gyan Shop",
+    },
+    {
+        coordinates: [25.494983, 81.864645],
+        popupText: "Athletic Ground",
+    },
+    {
+        coordinates: [25.4944852, 81.8657703],
+        popupText: "Swimming Pool",
+    },
+    {
+        coordinates: [25.493886, 81.865829],
+        popupText: "Basketball Court",
+    },
+];
 
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -86,7 +240,7 @@ const toast = useToast()
     try {
       const response = await axios.post('http://localhost:5217/api/v1/createHunt', huntData);
       console.log("Hunt created successfully", response.data);
-      if(response.ok){
+      if(response.status==200){
         toast({
           title: "New Hunt created",
           description: "Refresh to add it to the page",
@@ -96,7 +250,7 @@ const toast = useToast()
       console.error("Error creating hunt:", error);
       alert("There was an error creating the hunt. Please try again.");
     }
-  }, [name, description, startTime, endTime, difficulty, puzzles, user?.id]);
+  }, [name, description, startTime, endTime, difficulty, puzzles, user?._id]);
 
   const addPuzzle = useCallback(() => {
     setPuzzles([...puzzles, {
@@ -124,12 +278,10 @@ const toast = useToast()
   }, []);
 
   // Handle location update from the map
-  const handleLocationSelect = useCallback((puzzleIndex: number, coordinates: [number, number]) => {
-    updatePuzzle(puzzleIndex, 'location', { coordinates });
+  const handleLocationSelect = useCallback((puzzleIndex: number, location: { coordinates: [number, number]; popupText?: string }) => {
+    updatePuzzle(puzzleIndex, 'location', location);
   }, [updatePuzzle]);
 
-  const position = useMemo(() => [40.7128, -74.006], []); // Example coordinates for NYC
-  const zoom = useMemo(() => 13, []);
 
   const boundsConstraint = {
     north: 25.496979684903667,
@@ -217,13 +369,17 @@ const toast = useToast()
                 posix={[25.493620009925067, 81.8628369732815]} // Default position
                 bounds={boundsConstraint}
                 onLocationSelect={(coordinates) => handleLocationSelect(puzzleIndex, coordinates)} // Pass the index and coordinates
+                customLocations={customLocations}
               />
             </div>
             {puzzle.location && puzzle.location.coordinates && (
-              <p className="text-sm text-emerald-400">
-                Selected: {puzzle.location.coordinates[0].toFixed(4)}, {puzzle.location.coordinates[1].toFixed(4)}
-              </p>
-            )}
+  <p className="text-sm text-emerald-400">
+    Selected: {puzzle.location.coordinates[0].toFixed(4)}, {puzzle.location.coordinates[1].toFixed(4)}
+    {puzzle.location.popupText && (
+      <span> - {puzzle.location.popupText}</span>
+    )}
+  </p>
+)}
             <div className="flex items-center">
               <span className="text-sm text-emerald-400 mr-2">Image Required</span>
               <Switch

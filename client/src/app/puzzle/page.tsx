@@ -18,22 +18,19 @@ import { useHunt } from "../context/huntContext";
 import { interval } from "date-fns";
 import { AuthContext } from "../context/AuthContext";
 const formSchema = z.object({
-  location: z.tuple([z.number(), z.number()]),
+  location: z.array(z.number()).length(2).nullable(),
   photo: z.any().optional(),
 });
+
+type FormData = z.infer<typeof formSchema>;
 type LeaderboardEntry = {
-  rank: number;
+  userId: string;
   name: string;
   score: number;
-  solved: number;
-  time: string;
+  solvedPuzzles: number;
+  timeTaken: string;
+  rank?: number;
 };
-
-const MOCK_LEADERBOARD: LeaderboardEntry[] = [
-  { rank: 1, name: "Alex Turner", score: 2500, solved: 5, time: "1h 23m" },
-  { rank: 2, name: "Sarah Chen", score: 2300, solved: 4, time: "1h 45m" },
-  { rank: 3, name: "Raj Patel", score: 2100, solved: 4, time: "2h 10m" },
-];
 
 
 export default function PuzzlePage() {
@@ -47,7 +44,8 @@ export default function PuzzlePage() {
   const [hintsOpened, setHintsOpened] = useState(0);
   const [submissionIntervals, setSubmissionIntervals] = useState<number[]>([]);
   const [currentPuzzle, setCurrentPuzzle] = useState(0);
-  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false);
   const [isLeaderboardUpdated, setIsLeaderboardUpdated] = useState(false); 
   const authContext = useContext(AuthContext);
   if (!authContext) {
@@ -60,11 +58,36 @@ export default function PuzzlePage() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      location: [0, 0],
+      location: null,
+      photo: undefined
     }
   });
 
 console.log(participationData)
+
+useEffect(() => {
+  // Set huntStartTime when the puzzle starts or changes
+  const startTime = Date.now();
+  setHuntStartTime(startTime);
+
+  // Reset elapsed time for the new puzzle
+  setElapsedTime(0);
+
+  return () => {
+    // Optional cleanup logic if required when the component unmounts or puzzle changes
+  };
+}, [currentPuzzle]);
+
+// Calculate elapsed time
+useEffect(() => {
+  if (!huntStartTime) return;
+
+  const timer = setInterval(() => {
+    setElapsedTime(Math.floor((Date.now() - huntStartTime) / 1000)); // Update elapsed time in seconds
+  }, 1000);
+
+  return () => clearInterval(timer); // Clear timer on unmount
+}, [huntStartTime]);
 
 const endTime = participationData.data.puzzles.endTime
 function calculateTimeRemaining(endTime) {
@@ -90,6 +113,15 @@ useEffect(() => {
 
   return () => clearInterval(interval); // Cleanup on component unmount
 }, [endTime]);
+
+const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
+
+// Callback for LocationSharing
+const handleLocationChange = (coords: [number, number]) => {
+  setCurrentLocation(coords);
+};
+
+
 const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (file) {
@@ -101,29 +133,13 @@ const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
   }
 };
 
-async function fetchLeaderboard() {
-  try {
-    const response = await fetch(`http://localhost:5217/api/v1/leaderboard/${participationData.data.huntId}`,{
-      method: "GET",
-      body: participationData.data.huntId
-    });
-    if (!response.ok) throw new Error("Failed to fetch leaderboard");
-    const data = await response.json();
-    console.log(data)
-    setLeaderboard(data);
-    setIsLeaderboardUpdated(false); // Reset flag after leaderboard is updated
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-async function onSubmit(values: z.infer<typeof formSchema>) {
+async function onSubmit(values: FormData) {
   setIsSubmitting(true);
-  
-  if (!user?._id || !participationData?.data?.huntId) {
+
+  if (!user?._id || !participationData?.data?.huntId ) {
     toast({
       title: "Error",
-      description: "Missing user or hunt information",
+      description: "Missing user, hunt, or location information",
       variant: "destructive",
     });
     setIsSubmitting(false);
@@ -135,12 +151,12 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
 
   try {
     const formData = new FormData();
-    
+
     // Add all required fields
     formData.append("huntId", participationData.data.huntId);
     formData.append("userId", user._id);
     formData.append("puzzleId", participationData.data.puzzles.puzzles[currentPuzzle]._id);
-    formData.append("guessedLocation", JSON.stringify({ coordinates: values.location }));
+    formData.append("guessedLocation", JSON.stringify({ coordinates: currentLocation }));
     formData.append("timeTaken", timeTaken.toString());
     formData.append("hintsOpened", hintsOpened.toString());
 
@@ -148,35 +164,42 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
     if (participationData.data.puzzles.puzzles[currentPuzzle].photoReq && photo) {
       formData.append("image", photo);
     }
+
+    console.log("Submitting form data:", Object.fromEntries(formData.entries()));
+
     const response = await fetch("http://localhost:5217/api/v1/submitGuess", {
       method: "PUT",
       body: formData,
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to submit answer");
+      throw new Error(result.message || "Failed to submit answer");
     }
 
-    const result = await response.json();
-    console.log(result)
-    
+    console.log("Submission result:", result);
+
     toast({
       title: "Success!",
-      description: result.message || "Answer submitted successfully",
+      description: `Answer submitted successfully! Score: ${result.score}`,
     });
 
     // Move to next puzzle if submission was successful
-    if (currentPuzzle < participationData.data.puzzles.puzzles.length-1) {
-      setCurrentPuzzle(prev => prev + 1);
+    if (currentPuzzle < participationData.data.puzzles.puzzles.length - 1) {
+      setCurrentPuzzle((prev) => prev + 1);
     }
-    setIsLeaderboardUpdated(true);
+
     // Reset form and photo
     form.reset();
     setPhoto(null);
     setHintsOpened(0);
 
+    // Fetch updated leaderboard immediately after successful submission
+    await fetchLeaderboard();
+
   } catch (error) {
+    console.error("Submission error:", error);
     toast({
       title: "Error",
       description: error.message || "Failed to submit answer",
@@ -187,8 +210,99 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
   }
 }
 
-  
-  
+// Modify your fetchLeaderboard function to include better error handling:
+type LeaderboardApiResponse = {
+  data: {
+    leaderboard: Array<{
+      email: string;
+      hintsUsed: number;
+      lastAttempt: string;
+      points: number;
+      puzzlesSolved: number;
+      rank: number;
+      userName: string;
+    }>;
+  };
+  message: string;
+  statusCode: number;
+  success: boolean;
+};
+
+// Update the LeaderboardEntry type to match our transformed data
+type LeaderboardEntry = {
+  userId: string;
+  name: string;
+  score: number;
+  solvedPuzzles: number;
+  timeTaken: string;
+  rank: number;
+};
+
+// Update the fetchLeaderboard function
+const fetchLeaderboard = async () => {
+  setIsLeaderboardLoading(true);
+  try {
+    console.log("Fetching leaderboard for hunt:", participationData.data.huntId);
+    
+    const response = await fetch(
+      `http://localhost:5217/api/v1/leaderboard/${participationData.data.huntId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch leaderboard");
+    }
+    
+    const responseData: LeaderboardApiResponse = await response.json();
+    console.log("Leaderboard data received:", responseData);
+    
+    if (!responseData.success || !responseData.data.leaderboard) {
+      throw new Error("Invalid leaderboard data received");
+    }
+    
+    // Transform the API response data into the required format
+    const processedData: LeaderboardEntry[] = responseData.data.leaderboard.map((entry) => {
+      // Calculate time taken since last attempt
+      const lastAttemptDate = new Date(entry.lastAttempt);
+      const now = new Date();
+      const timeDiff = Math.floor((now.getTime() - lastAttemptDate.getTime()) / 1000); // in seconds
+      
+      // Format time taken
+      const formatTimeTaken = (seconds: number): string => {
+        if (seconds < 60) return `${seconds}s ago`;
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        return `${Math.floor(seconds / 3600)}h ago`;
+      };
+
+      return {
+        userId: entry.email, // Using email as userId since it's unique
+        name: entry.userName,
+        score: entry.points,
+        solvedPuzzles: entry.puzzlesSolved,
+        timeTaken: formatTimeTaken(timeDiff),
+        rank: entry.rank
+      };
+    });
+    
+    setLeaderboard(processedData);
+  } catch (error) {
+    console.error("Leaderboard fetch error:", error);
+    toast({
+      title: "Error",
+      description: "Failed to load leaderboard data",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLeaderboardLoading(false);
+  }
+};
+
 
   if (error) {
     return (
@@ -210,12 +324,11 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
     );
   }
 
-
   useEffect(() => {
-    if (isLeaderboardUpdated) {
-      fetchLeaderboard(); // Fetch leaderboard after a successful submission
+    if (participationData?.data?.huntId) {
+      fetchLeaderboard();
     }
-  }, [isLeaderboardUpdated]);
+  }, [participationData?.data?.huntId]);
   return (
     <div className="min-h-screen bg-background">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1533240332313-0db49b459ad6?auto=format&fit=crop&q=80&w=2000&h=1000&blur=50')] mix-blend-overlay opacity-5 bg-cover bg-center" />
@@ -280,98 +393,144 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
 
               {/* Location Sharing Section */}
               <Card className="glass-card p-6">
-                <LocationSharing />
+              <LocationSharing onLocationChange={handleLocationChange} />
               </Card>
               <Card className="glass-card p-6">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {participationData.data.puzzles.puzzles[currentPuzzle].photoReq && (
-  <div className="flex gap-4">
-    <Button
-      type="button"
-      variant="outline"
-      className="flex-1 border-emerald-500/20"
-      onClick={() => document.getElementById("photo-input")?.click()}
-    >
-      <Upload className="w-4 h-4 mr-2" />
-      Upload Photo
-    </Button>
-    <input
-      type="file"
-      id="photo-input"
-      accept="image/*"
-      onChange={handlePhotoUpload}
-      style={{ display: "none" }}
+              <Form {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <FormField
+      control={form.control}
+      name="location"
+      render={({ field }) => (
+        <FormItem>
+          <FormControl>
+            <input
+              type="hidden"
+              {...field}
+              value={currentLocation ? JSON.stringify(currentLocation) : ''}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
     />
-  </div>
-)}
+    
+    {participationData.data.puzzles.puzzles[currentPuzzle].photoReq && (
+      <FormField
+        control={form.control}
+        name="photo"
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-emerald-500/20"
+                  onClick={() => document.getElementById("photo-input")?.click()}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Photo
+                </Button>
+                <input
+                  type="file"
+                  id="photo-input"
+                  accept="image/*"
+                  onChange={(e) => {
+                    handlePhotoUpload(e);
+                    field.onChange(e.target.files?.[0]);
+                  }}
+                  style={{ display: "none" }}
+                />
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    )}
 
-          <Button
-            type="submit"
-            className={cn(
-              "w-full bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500",
-              isSubmitting && "animate-pulse"
-            )}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Verifying..." : "Submit Answer"}
-          </Button>
-        </form>
-      </Form>
+    <Button
+      type="submit"
+      className={cn(
+        "w-full bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500",
+        isSubmitting && "animate-pulse"
+      )}
+      disabled={isSubmitting}
+    >
+      {isSubmitting ? "Verifying..." : "Submit Answer"}
+    </Button>
+  </form>
+</Form>
     </Card>
 
             </div>
 
             {/* Leaderboard Section */}
             <Card className="glass-card p-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-emerald-500" />
-                    Leaderboard
-                  </h2>
-                  <Button 
-  variant="ghost" 
-  size="sm" 
-  onClick={async () => {
-    await fetchLeaderboard(); 
-    toast({
-      title: "Leaderboard Updated",
-      description: "Latest scores loaded!",
-    });
-  }}
->
-  Refresh
-</Button>
-                </div>
-                
-                <div className="space-y-2">
-                  {leaderboard.map((entry) => (
-                    <div
-                      key={entry.rank}
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-lg",
-                        entry.rank === 1 && "bg-emerald-500/10 border border-emerald-500/20"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center text-sm",
-                          entry.rank === 1 && "bg-emerald-500 text-white"
-                        )}>
-                          {entry.rank}
-                        </span>
-                        <div>
-                          <p className="font-medium">{entry.name}</p>
-                          <p className="text-sm text-gray-400">{entry.solved} puzzles • {entry.time}</p>
-                        </div>
-                      </div>
-                      <span className="font-bold">{entry.score}</span>
-                    </div>
-                  ))}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-emerald-500" />
+          Leaderboard
+        </h2>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={fetchLeaderboard}
+          disabled={isLeaderboardLoading}
+        >
+          {isLeaderboardLoading ? (
+            <span className="flex items-center gap-2">
+              <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+              Updating...
+            </span>
+          ) : (
+            "Refresh"
+          )}
+        </Button>
+      </div>
+      
+      <div className="space-y-2">
+        {leaderboard.length === 0 ? (
+          <div className="text-center py-4 text-gray-400">
+            No leaderboard data available
+          </div>
+        ) : (
+          leaderboard.map((entry) => (
+            <div
+              key={entry.userId}
+              className={cn(
+                "flex items-center justify-between p-3 rounded-lg",
+                entry.rank === 1 && "bg-emerald-500/10 border border-emerald-500/20",
+                user?._id === entry.userId && "bg-sky-500/10 border border-sky-500/20"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <span className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center text-sm",
+                  entry.rank === 1 && "bg-emerald-500 text-white",
+                  user?._id === entry.userId && "bg-sky-500 text-white"
+                )}>
+                  {entry.rank}
+                </span>
+                <div>
+                  <p className="font-medium">
+                    {entry.name}
+                    {user?._id === entry.userId && " (You)"}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {entry.solvedPuzzles} puzzles • {entry.timeTaken}
+                  </p>
                 </div>
               </div>
-            </Card>
+              <span className="font-bold">{entry.score}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </Card>
           </div>
         </div>
       </div>

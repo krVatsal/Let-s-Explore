@@ -1,48 +1,63 @@
 import { useEffect, useRef, useState } from "react";
-import L, { LatLngExpression, LatLngTuple, Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import L, { LatLngExpression, LatLngTuple, Map as LeafletMap, Marker as LeafletMarker, Popup } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css";
 import "leaflet-defaulticon-compatibility";
 
+interface CustomLocation {
+    coordinates: LatLngTuple;
+    popupText?: string;
+}
+
 interface MapProps {
     posix: LatLngExpression | LatLngTuple;
     zoom?: number;
-    customLocation?: LatLngTuple; // Optional custom location
-    bounds?: { north: number; south: number; east: number; west: number }; // Bounds for restricting area
-    onLocationSelect: (coordinates: LatLngTuple) => void; // Callback to send coordinates back to the parent
+    customLocations?: CustomLocation[];
+    bounds?: { north: number; south: number; east: number; west: number };
+    // Update the callback type to receive both coordinates and popupText
+    onLocationSelect: (location: { coordinates: LatLngTuple; popupText?: string }) => void;
 }
 
-const Map = ({ posix, zoom = 19, customLocation, bounds, onLocationSelect }: MapProps) => {
+const Map = ({ posix, zoom = 15, customLocations = [], bounds, onLocationSelect }: MapProps) => {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapInstanceRef = useRef<LeafletMap | null>(null);
-    const markerRef = useRef<LeafletMarker | null>(null);
+    const [selectedMarker, setSelectedMarker] = useState<LeafletMarker | null>(null);
 
     useEffect(() => {
         if (mapContainerRef.current && !mapInstanceRef.current) {
-            // Initialize map
             const initializedMap = L.map(mapContainerRef.current, {
                 attributionControl: false,
                 center: posix,
                 zoom: zoom,
             });
-
-            // Add tile layer
+            
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             }).addTo(initializedMap);
 
-            // Add initial marker at specified position
-            L.marker(posix).addTo(initializedMap).bindPopup("Hey! I study here");
+            const markers: LeafletMarker[] = [];
+            customLocations.forEach((location) => {
+                const marker = L.marker(location.coordinates).addTo(initializedMap);
+                if (location.popupText) {
+                    marker.bindPopup(location.popupText);
+                }
+                
+                marker.on("click", () => {
+                    if (selectedMarker !== marker) {
+                        marker.openPopup();
+                        // Pass both coordinates and popupText to the callback
+                        onLocationSelect({
+                            coordinates: location.coordinates,
+                            popupText: location.popupText
+                        });
+                        setSelectedMarker(marker);
+                    } else {
+                        marker.togglePopup();
+                    }
+                });
+                markers.push(marker);
+            });
 
-            // Add custom marker if customLocation is provided
-            if (customLocation) {
-                L.marker(customLocation)
-                    .addTo(initializedMap)
-                    .bindPopup("Custom Location")
-                    .openPopup();
-            }
-
-            // Restrict map view to bounds if provided
             if (bounds) {
                 const maxBounds = L.latLngBounds(
                     [bounds.south, bounds.west],
@@ -54,36 +69,21 @@ const Map = ({ posix, zoom = 19, customLocation, bounds, onLocationSelect }: Map
                 });
             }
 
-            // Click event to get coordinates and move marker
-            initializedMap.on("click", (e) => {
-                const { lat, lng } = e.latlng;
-                const clickedCoordinates: LatLngTuple = [lat, lng];
-
-                // Move existing marker or create a new one
-                if (!markerRef.current) {
-                    markerRef.current = L.marker(clickedCoordinates).addTo(initializedMap);
-                } else {
-                    markerRef.current.setLatLng(clickedCoordinates);
-                }
-
-                // Call the parent callback with the clicked coordinates
-                onLocationSelect(clickedCoordinates);
-
-                console.log("Clicked Coordinates:", lat, lng);
-            });
-
-            // Store the map instance
             mapInstanceRef.current = initializedMap;
-        }
 
-        // Cleanup on unmount
-        return () => {
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
+            return () => {
+                markers.forEach((marker) => marker.remove());
+                initializedMap.remove();
                 mapInstanceRef.current = null;
-            }
-        };
-    }, [posix, zoom, customLocation, bounds, onLocationSelect]);
+            };
+        }
+    }, [posix, zoom, customLocations, bounds, onLocationSelect]);
+
+    useEffect(() => {
+        if (selectedMarker) {
+            selectedMarker.openPopup();
+        }
+    }, [selectedMarker]);
 
     return (
         <div>

@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MapPin, Share2, Copy, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function LocationSharing() {
+export function LocationSharing({ onLocationUpdate }: { onLocationUpdate: (location: { latitude: number; longitude: number }) => void }) {
   const [location, setLocation] = useState<GeolocationCoordinates | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -28,8 +28,10 @@ export function LocationSharing() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLocation(position.coords);
+        const coords = position.coords;
+        setLocation(coords);
         setIsLoading(false);
+        onLocationUpdate({ latitude: coords.latitude, longitude: coords.longitude }); // Update parent with new location
         toast({
           title: "Location Retrieved",
           description: "Your current location has been successfully captured.",
@@ -47,18 +49,8 @@ export function LocationSharing() {
     );
   };
 
-  const getGeolocationErrorMessage = (error: GeolocationPositionError) => {
-    switch (error.code) {
-      case error.PERMISSION_DENIED:
-        return "Location permission was denied. Please enable location access.";
-      case error.POSITION_UNAVAILABLE:
-        return "Location information is unavailable.";
-      case error.TIMEOUT:
-        return "Location request timed out.";
-      default:
-        return "An unknown error occurred.";
-    }
-  };
+
+
 
   const handleCopyLocation = () => {
     if (!location) return;
