@@ -3,7 +3,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import redis from 'ioredis';
 import { HuntModel } from "../models/hunt.models.js";
-
+import mongoose from "mongoose";
 // export const joinEvent = asyncHandler(async (req, res) => {
 //     const { userId, huntId } = req.body;
 
@@ -38,21 +38,65 @@ import { HuntModel } from "../models/hunt.models.js";
 
 const getLeaderboard = asyncHandler(async (req, res) => {
     const { huntId } = req.params;
-
-    const cachedLeaderboard = await redis.get(`leaderboard_${huntId}`);
-    if (cachedLeaderboard) {
-        return res.status(200).json(new ApiResponse(200, JSON.parse(cachedLeaderboard), 'Leaderboard fetched from cache'));
+    
+    if (!huntId) {
+        throw new ApiError(400, "Hunt ID is required");
     }
 
-    const leaderboard = await HuntModel.aggregate([
-        { $match: { _id: huntId } },
-        { $unwind: "$leaderboard" },
-        { $sort: { "leaderboard.timeCompleted": 1, "leaderboard.score": -1 } },
-        { $project: { leaderboard: 1, _id: 0 } }
-    ]);
+    const hunt = await HuntModel.findById(huntId)
+        .populate({
+            path: 'participants.user',
+            select: 'firstName lastName email'
+        })
+        .select('participants');
+        console.log(hunt)
 
-    await redis.set(`leaderboard_${huntId}`, JSON.stringify(leaderboard), 'EX', 60);
-    res.status(200).json(new ApiResponse(200, leaderboard, 'Leaderboard fetched successfully'));
+    if (!hunt) {
+        throw new ApiError(404, "Hunt not found");
+    }
+
+    // Transform and sort participants
+    const leaderboard = hunt.participants
+        .map(participant => ({
+            userName: `${participant.user.firstName} ${participant.user.lastName}`,
+            email: participant.user.email,
+            points: participant.points,
+            puzzlesSolved: participant.guesses.length,
+            hintsUsed: participant.guesses.reduce((total, guess) => total + guess.hintsOpened, 0),
+            lastAttempt: participant.guesses.length > 0 
+                ? participant.guesses[participant.guesses.length - 1].timestamp 
+                : null
+        }))
+        .sort((a, b) => {
+            // Sort by points in descending order
+            if (b.points !== a.points) {
+                return b.points - a.points;
+            }
+            // If points are equal, sort by puzzles solved
+            if (b.puzzlesSolved !== a.puzzlesSolved) {
+                return b.puzzlesSolved - a.puzzlesSolved;
+            }
+            // If puzzles solved are equal, sort by hints used (fewer hints is better)
+            if (a.hintsUsed !== b.hintsUsed) {
+                return a.hintsUsed - b.hintsUsed;
+            }
+            // If everything is equal, sort by last attempt time
+            return a.lastAttempt && b.lastAttempt 
+                ? a.lastAttempt - b.lastAttempt 
+                : 0;
+        })
+        .map((participant, index) => ({
+            rank: index + 1,
+            ...participant
+        }));
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            { leaderboard },
+            'Leaderboard fetched successfully'
+        )
+    );
 });
 
 // export const updateGuess = asyncHandler(async (req, res) => {

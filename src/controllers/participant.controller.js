@@ -119,6 +119,7 @@ try {
 const submitGuess = asyncHandler(async (req, res) => {
     try {
         const { huntId, userId, puzzleId, guessedLocation, timeTaken, hintsOpened } = req.body;
+        console.log(req.body)
 
         if (!huntId || !userId || !puzzleId || !guessedLocation || !timeTaken || hintsOpened == null) {
             throw new ApiError(400, 'Missing required fields');
@@ -202,7 +203,6 @@ const submitGuess = asyncHandler(async (req, res) => {
         throw new Error(error);
     }
 });
-
 const calculateDistance = (coords1, coords2) => {
     const R = 6371e3; // Earth's radius in meters
     const lat1 = (coords1.lat * Math.PI) / 180;
