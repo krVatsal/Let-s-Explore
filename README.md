@@ -158,6 +158,10 @@ GOOGLE_CLIENT_SECRET=YourGoogleClientSecret
 
 ## **📸 Screenshots**
 
+### **Logo**
+The Minimilist Logo that symbolizes the purpose of this website:  
+![Logo](https://github.com/user-attachments/assets/38100775-ec69-4633-8ec8-918024c426f8)
+
 ### **Homepage**
 The sleek and inviting landing page:  
 ![Homepage](https://github.com/user-attachments/assets/e358f506-c000-4a4f-9789-8f07b2515232)
